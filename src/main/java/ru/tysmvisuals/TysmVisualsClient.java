@@ -358,11 +358,8 @@ public class TysmVisualsClient implements ClientModInitializer {
                 case "Accent Bar" -> accentBarEnabled;
                 case "Soft Tint", "Sky Tint", "Fog Tint", "Water Tint", "Night Accent",
                      "Weather Overlay", "Biome Ambience", "Sunset Glow", "Moon Glow", "World Fade",
-                     "Ambient Dots", "Sparkles", "Soft Rings", "Trail Dots", "Landing Dust",
-                     "Screen Sparks", "Orbit Particles", "Glow Motes", "Particle Fade",
-                     "Item Highlight", "Status Cards", "Dynamic Island", "FPS Badge", "Ping Badge",
-                     "Clock Badge", "Clean UI", "UI Scale", "Menu Blur", "Menu Animation",
-                     "Gui Sounds", "Minimal Mode", "About" -> extra(feature);
+                     "Ambient Dots", "Sparkles", "Trail Dots", "Landing Dust",
+                     "Item Highlight", "Status Cards", "Clean UI", "UI Scale", "Minimal Mode" -> extra(feature);
                 case "Reset Visuals" -> false;
                 default -> false;
             };
