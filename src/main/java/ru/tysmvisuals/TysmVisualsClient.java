@@ -112,6 +112,10 @@ public class TysmVisualsClient implements ClientModInitializer {
             drawAmbientParticles(ctx, w, h, red, client.player.age);
         }
 
+        // Showcase visual layer inspired by the reference: bright star particles,
+        // soft aura, drifting motes and a short luminous trail. Purely cosmetic.
+        drawShowcaseEffects(ctx, w, h, red, client.player.age);
+
         if (hudEnabled) {
             drawBrand(ctx, client);
         }
@@ -143,6 +147,71 @@ public class TysmVisualsClient implements ClientModInitializer {
         }
         if (extra("Dynamic Island")) {
             drawDynamicIsland(ctx, w, red);
+        }
+    }
+
+    private static void drawShowcaseEffects(DrawContext ctx, int w, int h, int red, int age) {
+        float t = age * 0.045f;
+        int cx = w / 2;
+        int cy = h / 2 + 34;
+
+        // Soft aura behind the focal point.
+        for (int r = 42; r >= 8; r -= 7) {
+            int alpha = Math.max(2, 16 - r / 5);
+            int c = (alpha << 24) | 0xD9E8FF;
+            ctx.fill(cx - r, cy - r / 3, cx + r, cy + r / 3, c);
+        }
+
+        // Floating star/snowflake particles.
+        for (int i = 0; i < 34; i++) {
+            float phase = t * (0.55f + (i % 5) * 0.08f) + i * 1.91f;
+            float orbit = 38f + (i % 7) * 19f;
+            int x = (int)(cx + MathHelper.cos(phase * 0.83f + i) * orbit
+                    + MathHelper.sin(phase * 0.37f) * 42f);
+            int y = (int)(cy + MathHelper.sin(phase * 0.71f + i * 0.31f) * orbit * 0.58f
+                    - (i % 4) * 7f);
+
+            int size = 1 + (i % 3);
+            int alpha = 65 + (int)((MathHelper.sin(phase * 1.7f) + 1f) * 45f);
+            int white = (alpha << 24) | 0xF4F1FF;
+
+            if (size >= 2) {
+                ctx.fill(x - 2, y, x + size + 2, y + 1,
+                        (Math.max(10, alpha / 5) << 24) | 0xE8E0FF);
+                ctx.fill(x, y - 2, x + 1, y + size + 2,
+                        (Math.max(10, alpha / 5) << 24) | 0xE8E0FF);
+            }
+            ctx.fill(x - size, y, x + size + 1, y + 1, white);
+            ctx.fill(x, y - size, x + 1, y + size + 1, white);
+
+            if ((i & 3) == 0) {
+                ctx.fill(x - size, y - size, x - size + 1, y - size + 1, red);
+                ctx.fill(x + size, y + size, x + size + 1, y + size + 1, red);
+            }
+        }
+
+        // Bright cosmetic bursts near the lower center.
+        for (int i = 0; i < 5; i++) {
+            float a = t * 0.8f + i * 1.2566f;
+            int bx = cx + (int)(MathHelper.cos(a) * (22f + i * 8f));
+            int by = cy + 34 + (int)(MathHelper.sin(a * 1.3f) * 16f);
+            int size = 2 + (i % 2);
+            int alpha = 85 + (int)((MathHelper.sin(a * 2f) + 1f) * 45f);
+            int white = (alpha << 24) | 0xFFFFFF;
+            ctx.fill(bx - size * 2, by, bx + size * 2 + 1, by + 1, white);
+            ctx.fill(bx, by - size * 2, bx + 1, by + size * 2 + 1, white);
+            ctx.fill(bx - size, by - size, bx - size + 1, by - size + 1, white);
+            ctx.fill(bx + size, by + size, bx + size + 1, by + size + 1, white);
+        }
+
+        // Short flowing trail.
+        for (int i = 0; i < 12; i++) {
+            float p = (t * 0.9f + i * 0.42f) % 5.2f;
+            int x = cx - 110 + (int)(p * 28f);
+            int y = cy + 42 + (int)(MathHelper.sin(p * 2.2f + i) * 10f);
+            int alpha = Math.max(8, 70 - i * 5);
+            int c = (alpha << 24) | ((i % 3 == 0) ? (red & 0xFFFFFF) : 0xE9E4FF);
+            ctx.fill(x, y, x + 3, y + 3, c);
         }
     }
 
