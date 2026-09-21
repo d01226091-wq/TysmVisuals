@@ -86,7 +86,14 @@ public class TysmVisualsClient implements ClientModInitializer {
     private static int accent() {
         return THEMES[themeIndex];
     }
-\n    public static boolean isSkyColorEnabled() {\n        return skyColorEnabled;\n    }\n\n    public static int getSkyColor() {\n        return SKY_COLORS[skyColorIndex] & 0xFFFFFF;\n    }\n
+    public static boolean isSkyColorEnabled() {
+        return skyColorEnabled;
+    }
+
+    public static int getSkyColor() {
+        return SKY_COLORS[skyColorIndex] & 0xFFFFFF;
+    }
+
     private static boolean extra(String name) {
         return EXTRA.getOrDefault(name, false);
     }
@@ -272,6 +279,7 @@ public class TysmVisualsClient implements ClientModInitializer {
     private static class TysmMenuScreen extends Screen {
         private long openedAt;
         private int selectedTab = 0;
+        private int selectedVisual = -1;
 
         private static final String[] TABS = {
                 "Главное", "Визуалы", "Утилиты", "Косметика", "Настройки"
@@ -404,20 +412,36 @@ public class TysmVisualsClient implements ClientModInitializer {
         }
 
         private void drawVisualsCard(DrawContext ctx, int x, int y, int w, int red, float a) {
-            ctx.fill(x + 3, y + 4, x + w + 3, y + 112, alpha(0x45000000, a));
-            ctx.fill(x, y, x + w, y + 108, alpha(0xB5101119, a));
-            ctx.fill(x, y, x + 3, y + 108, alpha(red, a));
-            ctx.drawText(textRenderer, Text.literal("Sky Color"), x + 13, y + 11, alpha(WHITE, a), true);
-            ctx.drawText(textRenderer, Text.literal("Цвет неба"), x + 13, y + 27, alpha(MUTED, a), false);
-            int size=20, gap=6, startX=x+13, sy=y+48;
-            for(int i=0;i<SKY_COLORS.length;i++){
-                int sx=startX+i*(size+gap);
-                boolean selected=skyColorEnabled&&skyColorIndex==i;
-                ctx.fill(sx-2,sy-2,sx+size+2,sy+size+2,alpha(selected?WHITE:0x403A3C48,a));
-                ctx.fill(sx,sy,sx+size,sy+size,alpha(SKY_COLORS[i],a));
+            String[] visuals = {"Sky Color", "Crosshair", "Vignette", "Hotbar Glow"};
+            ctx.fill(x + 3, y + 4, x + w + 3, y + 142, alpha(0x45000000, a));
+            ctx.fill(x, y, x + w, y + 138, alpha(0xB5101119, a));
+            ctx.fill(x, y, x + 3, y + 138, alpha(red, a));
+
+            ctx.drawText(textRenderer, Text.literal("Визуалы"), x + 13, y + 10, alpha(WHITE, a), true);
+            ctx.drawText(textRenderer, Text.literal("ЛКМ по визуалу — открыть его настройки"), x + 13, y + 25, alpha(MUTED, a), false);
+
+            for (int i = 0; i < visuals.length; i++) {
+                int rowY = y + 43 + i * 22;
+                boolean selected = selectedVisual == i;
+                ctx.fill(x + 10, rowY - 3, x + w - 10, rowY + 16,
+                        alpha(selected ? 0x382A2D38 : 0x181A1F28, a));
+                if (selected) {
+                    ctx.fill(x + 10, rowY - 3, x + 12, rowY + 16, alpha(red, a));
+                }
+                ctx.drawText(textRenderer, Text.literal(visuals[i]), x + 18, rowY + 2,
+                        alpha(selected ? WHITE : MUTED, a), selected);
             }
-            ctx.drawText(textRenderer,Text.literal(skyColorEnabled?SKY_COLOR_NAMES[skyColorIndex]:"OFF"),x+13,y+79,alpha(MUTED,a),false);
-            ctx.drawText(textRenderer,Text.literal("Кликни по цвету"),x+13,y+94,alpha(MUTED,a),false);
+
+            if (selectedVisual >= 0) {
+                String setting = switch (selectedVisual) {
+                    case 0 -> "Настройки Sky Color";
+                    case 1 -> "Настройки Crosshair";
+                    case 2 -> "Настройки Vignette";
+                    default -> "Настройки Hotbar Glow";
+                };
+                ctx.drawText(textRenderer, Text.literal(setting), x + 13, y + 132,
+                        alpha(red, a), true);
+            }
         }
 
         @Override
@@ -434,29 +458,23 @@ public class TysmVisualsClient implements ClientModInitializer {
                     int index = (int)((mouseY - (y + 51)) / 29);
                     if (index >= 0 && index < TABS.length) {
                         selectedTab = index;
+                        selectedVisual = -1;
                         return true;
                     }
                 }
 
                 if (selectedTab == 1) {
-                    int menuW2 = Math.min(430, width - 32);
-                    int menuH2 = Math.min(230, height - 32);
-                    int x2 = (width - menuW2) / 2;
-                    int y2 = (height - menuH2) / 2;
-                    int contentX2 = x2 + 112 + 22;
-                    int cardY = y2 + 70;
-                    int size=20, gap=6, startX=contentX2+13, swatchY=cardY+48;
-                    if(mouseY>=swatchY-4 && mouseY<=swatchY+size+4){
-                        for(int i=0;i<SKY_COLORS.length;i++){
-                            int sx=startX+i*(size+gap);
-                            if(mouseX>=sx-2 && mouseX<=sx+size+2){
-                                skyColorIndex=i;
-                                skyColorEnabled=true;
-                                return true;
-                            }
+                    int contentX = x + sideW + 22;
+                    int cardY = y + 70;
+                    int w = menuW - sideW - 38;
+                    for (int i = 0; i < 4; i++) {
+                        int rowY = cardY + 43 + i * 22;
+                        if (mouseX >= contentX + 10 && mouseX <= contentX + w - 10 &&
+                                mouseY >= rowY - 3 && mouseY <= rowY + 16) {
+                            selectedVisual = i;
+                            return true;
                         }
                     }
-                }
                 }
             }
             return super.mouseClicked(mouseX, mouseY, button);
