@@ -318,7 +318,7 @@ public class TysmVisualsClient implements ClientModInitializer {
                     sx + menuW / 2, sy + 94, alpha(MUTED, a));
 
             ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("1.21.4 • FABRIC"),
-                    sx + menuW / 2, sy + 118, alpha(MUTED, a), false);
+                    sx + menuW / 2, sy + 118, alpha(MUTED, a));
 
             super.render(ctx, mouseX, mouseY, delta);
         }
