@@ -356,7 +356,7 @@ public class TysmVisualsClient implements ClientModInitializer {
                 case "Color Theme", "Theme", "Red Edition" -> true;
                 case "HUD Branding", "HUD" -> hudEnabled;
                 case "Accent Bar" -> accentBarEnabled;
-                case "Soft Tint", "Sky Tint", "Fog Tint", "Water Tint", "Night Accent",
+                case "Sky Tint", "Fog Tint", "Water Tint", "Night Accent",
                      "Weather Overlay", "Biome Ambience", "Sunset Glow", "Moon Glow", "World Fade",
                      "Ambient Dots", "Sparkles", "Trail Dots", "Landing Dust",
                      "Item Highlight", "Status Cards", "Clean UI", "UI Scale", "Minimal Mode" -> extra(feature);
