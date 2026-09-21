@@ -266,193 +266,240 @@ public class TysmVisualsClient implements ClientModInitializer {
     }
 
     private static class TysmMenuScreen extends Screen {
+        private long openedAt;
+        private int selected = 0;
+
+        private static final String[] NAV = {
+                "Главная", "Визуал", "Интерфейс", "Эффекты", "Косметика", "Настройки"
+        };
+
+        private static final String[][] FEATURE_GROUPS = {
+                {"Мягкие кольца", "Орбитальные частицы", "Искры экрана", "Свечение", "Ambient Dots", "Glow Motes"},
+                {"Crosshair", "Screen Glow", "Vignette", "Hotbar Glow", "Accent Bar", "Soft Tint"},
+                {"HUD", "Hotbar Accent", "FPS Badge", "Ping Badge", "Clock Badge", "Dynamic Island"},
+                {"Soft Rings", "Orbit Particles", "Screen Sparks", "Glow Motes", "Trail Dots", "Particle Fade"},
+                {"Landing Dust", "Sparkles", "Biome Ambience", "Sunset Glow", "Moon Glow", "Weather Overlay"},
+                {"Menu Blur", "Menu Animation", "Gui Sounds", "Minimal Mode", "Red Edition", "Reset Visuals"}
+        };
+
         private TysmMenuScreen() {
             super(Text.literal("TysmVisuals"));
         }
 
         @Override
         protected void init() {
-            // Right Shift is registered globally; the menu itself uses direct mouse interaction.
+            openedAt = System.currentTimeMillis();
+        }
+
+        private float animation() {
+            float t = (System.currentTimeMillis() - openedAt) / 300f;
+            t = MathHelper.clamp(t, 0f, 1f);
+            return 1f - (float)Math.pow(1f - t, 3);
+        }
+
+        private int alpha(int color, float amount) {
+            int a = (color >>> 24) & 0xFF;
+            a = MathHelper.clamp((int)(a * amount), 0, 255);
+            return (a << 24) | (color & 0xFFFFFF);
+        }
+
+        private int slide(int target, float anim, int distance) {
+            return target + (int)((1f - anim) * distance);
         }
 
         @Override
-        public void render(DrawContext context, int mouseX, int mouseY, float delta) {
-            renderBackground(context, mouseX, mouseY, delta);
+        public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+            float a = animation();
+            int red = accent();
 
-            int screenW = width;
-            int screenH = height;
-            int gap = screenW >= 1100 ? 12 : 8;
-            int side = screenW >= 1100 ? 215 : 0;
-            int left = 24;
-            int top = Math.max(56, screenH / 2 - 150);
-            int available = screenW - left - 24 - side - gap * 4;
-            int panelW = Math.max(120, Math.min(190, available / 5));
-            int panelH = Math.min(440, screenH - top - 42);
-            int rowGap = panelH < 425 ? 31 : 35;
+            // Darken the world first, then bring the UI in smoothly.
+            ctx.fill(0, 0, width, height, alpha(0xB0000000, a));
+            drawBackgroundGlow(ctx, red, a);
 
-            drawBrand(context, 28, 18);
-            context.drawText(textRenderer, Text.literal("Fabric 1.21.4"), screenW - 118, 14, accent(), true);
-            context.drawText(textRenderer, Text.literal("COSMETIC CLIENT"), screenW - 118, 29, MUTED, false);
+            int menuW = Math.min(1040, width - 48);
+            int menuH = Math.min(610, height - 48);
+            int x = (width - menuW) / 2;
+            int y = (height - menuH) / 2;
+            int sx = slide(x, a, 28);
+            int sy = slide(y, a, 18);
 
-            for (int i = 0; i < CATEGORIES.length; i++) {
-                int x = left + i * (panelW + gap);
-                drawPanel(context, x, top, panelW, panelH, CATEGORIES[i], mouseX, mouseY, rowGap);
+            // Shadow and main glass panel.
+            ctx.fill(sx + 6, sy + 8, sx + menuW + 6, sy + menuH + 8, alpha(0x70000000, a));
+            ctx.fill(sx, sy, sx + menuW, sy + menuH, alpha(0xE9080B16, a));
+            ctx.fill(sx, sy, sx + menuW, sy + 2, alpha(red, a));
+
+            drawSidebar(ctx, sx, sy, menuW, menuH, mouseX, mouseY, a);
+            drawMain(ctx, sx, sy, menuW, menuH, mouseX, mouseY, a);
+
+            if (a < 1f) {
+                // A second tiny pass makes the opening feel softer without changing gameplay.
+                ctx.fill(0, 0, width, height, alpha(0x18000000, 1f - a));
             }
-
-            if (side > 0) {
-                int sx = left + 5 * (panelW + gap);
-                drawInfo(context, sx, top + 68, side - 10, 270);
-            }
-
-            drawControls(context, screenW - 245, screenH - 72);
-            super.render(context, mouseX, mouseY, delta);
+            super.render(ctx, mouseX, mouseY, delta);
         }
 
-        private void drawBrand(DrawContext ctx, int x, int y) {
-            int red = accent();
-            ctx.fill(x, y + 3, x + 150, y + 5, red);
-            ctx.drawText(textRenderer, Text.literal("TYSM"), x + 8, y + 9, WHITE, true);
-            ctx.drawText(textRenderer, Text.literal("VISUALS"), x + 53, y + 9, red, true);
-            ctx.drawText(textRenderer, Text.literal("COSMETIC  •  " + THEME_NAMES[themeIndex]), x + 9, y + 26, MUTED, false);
+        private void drawBackgroundGlow(DrawContext ctx, int red, float a) {
+            int cx = width / 2;
+            int cy = height / 2;
+            int glow = alpha((0x22 << 24) | (red & 0xFFFFFF), a);
+            for (int i = 0; i < 5; i++) {
+                int r = 100 + i * 75;
+                ctx.fill(cx - r, cy - 1, cx + r, cy + 1, glow);
+                ctx.fill(cx - 1, cy - r, cx + 1, cy + r, glow);
+            }
         }
 
-        private void drawPanel(DrawContext ctx, int x, int y, int w, int h, String[] rows,
-                               int mouseX, int mouseY, int rowGap) {
+        private void drawSidebar(DrawContext ctx, int x, int y, int menuW, int menuH,
+                                 int mouseX, int mouseY, float a) {
             int red = accent();
-            ctx.fill(x + 2, y + 3, x + w + 2, y + h + 3, 0x50000000);
-            ctx.fill(x, y, x + w, y + h, PANEL);
-            ctx.fill(x, y, x + w, y + 2, red);
-            ctx.fill(x, y + 43, x + w, y + 45, (0x88 << 24) | (red & 0xFFFFFF));
+            int sideW = 190;
 
-            ctx.drawText(textRenderer, Text.literal(rows[0]), x + 14, y + 14, WHITE, true);
-            ctx.drawText(textRenderer, Text.literal("⚙"), x + w - 19, y + 14, red, true);
+            ctx.fill(x, y, x + sideW, y + menuH, alpha(0xC30A0D16, a));
+            ctx.fill(x + sideW - 1, y + 20, x + sideW, y + menuH - 20, alpha(0x442A2D38, a));
 
-            for (int i = 1; i < rows.length; i++) {
-                int ry = y + 52 + (i - 1) * rowGap;
-                boolean hover = mouseX >= x && mouseX <= x + w
-                        && mouseY >= ry - 5 && mouseY < ry + rowGap;
+            ctx.drawText(textRenderer, Text.literal("✦"), x + 20, y + 25, alpha(red, a), true);
+            ctx.drawText(textRenderer, Text.literal("Tysm"), x + 43, y + 20, alpha(WHITE, a), true);
+            ctx.drawText(textRenderer, Text.literal("Visuals"), x + 43, y + 34, alpha(red, a), true);
+            ctx.drawText(textRenderer, Text.literal("COSMETIC CLIENT"), x + 20, y + 58, alpha(MUTED, a), false);
 
-                if (hover) {
-                    ctx.fill(x + 5, ry - 5, x + w - 5, ry + rowGap - 2, ROW);
-                    ctx.fill(x + 5, ry - 5, x + 8, ry + rowGap - 2, red);
+            for (int i = 0; i < NAV.length; i++) {
+                int ny = y + 94 + i * 49;
+                boolean hover = mouseX >= x + 12 && mouseX <= x + sideW - 12
+                        && mouseY >= ny && mouseY < ny + 38;
+
+                if (selected == i) {
+                    ctx.fill(x + 12, ny, x + sideW - 12, ny + 38, alpha(0x552A2DFF, a));
+                    ctx.fill(x + 12, ny, x + 15, ny + 38, alpha(red, a));
+                } else if (hover) {
+                    ctx.fill(x + 12, ny, x + sideW - 12, ny + 38, alpha(0x301A1D28, a));
                 }
 
-                String feature = rows[i];
-                ctx.drawText(textRenderer, Text.literal(feature), x + 10, ry + 3,
-                        hover ? WHITE : MUTED, false);
-
-                boolean on = getFeatureState(feature);
-                if (on) {
-                    ctx.drawText(textRenderer, Text.literal("✓"), x + w - 19, ry + 3, red, true);
-                } else {
-                    ctx.drawText(textRenderer, Text.literal("○"), x + w - 19, ry + 3, 0xFF666670, false);
-                }
+                String icon = switch (i) {
+                    case 0 -> "◆";
+                    case 1 -> "✦";
+                    case 2 -> "▣";
+                    case 3 -> "◈";
+                    case 4 -> "◇";
+                    default -> "⚙";
+                };
+                ctx.drawText(textRenderer, Text.literal(icon), x + 24, ny + 11,
+                        alpha(selected == i ? red : MUTED, a), true);
+                ctx.drawText(textRenderer, Text.literal(NAV[i]), x + 48, ny + 11,
+                        alpha(selected == i ? WHITE : MUTED, a), selected == i);
             }
+
+            ctx.fill(x + 14, y + menuH - 68, x + sideW - 14, y + menuH - 18, alpha(0x401A1D28, a));
+            ctx.drawText(textRenderer, Text.literal("TysmVisuals"), x + 26, y + menuH - 57, alpha(WHITE, a), true);
+            ctx.drawText(textRenderer, Text.literal("Fabric 1.21.4"), x + 26, y + menuH - 40, alpha(MUTED, a), false);
+        }
+
+        private void drawMain(DrawContext ctx, int x, int y, int menuW, int menuH,
+                              int mouseX, int mouseY, float a) {
+            int red = accent();
+            int contentX = x + 214;
+            int contentW = menuW - 238;
+
+            ctx.drawText(textRenderer, Text.literal(NAV[selected]), contentX, y + 25,
+                    alpha(WHITE, a), true);
+            ctx.drawText(textRenderer, Text.literal(
+                    selected == 0 ? "Быстрый доступ к визуальным эффектам" :
+                    "Настройка " + NAV[selected].toLowerCase()),
+                    contentX, y + 42, alpha(MUTED, a), false);
+
+            // Top performance cards.
+            int cardY = y + 70;
+            drawStat(ctx, contentX, cardY, 118, "FPS",
+                    String.valueOf(MinecraftClient.getInstance().getCurrentFps()), red, a);
+            drawStat(ctx, contentX + 128, cardY, 118, "PING",
+                    getPing(), red, a);
+            drawStat(ctx, contentX + 256, cardY, 118, "THEME",
+                    THEME_NAMES[themeIndex], red, a);
+
+            int gridY = y + 125;
+            int gap = 12;
+            int colW = (contentW - gap) / 2;
+            String[] features = FEATURE_GROUPS[Math.min(selected, FEATURE_GROUPS.length - 1)];
+
+            for (int i = 0; i < features.length; i++) {
+                int col = i % 2;
+                int row = i / 2;
+                int cx = contentX + col * (colW + gap);
+                int cy = gridY + row * 66;
+                drawFeatureCard(ctx, cx, cy, colW, 56, features[i], mouseX, mouseY, red, a);
+            }
+
+            int footerY = y + menuH - 38;
+            ctx.drawText(textRenderer, Text.literal("RIGHT SHIFT  •  CLOSE"), contentX, footerY,
+                    alpha(MUTED, a), false);
+            ctx.drawText(textRenderer, Text.literal("COSMETIC ONLY"), x + menuW - 142, footerY,
+                    alpha(red, a), true);
+        }
+
+        private String getPing() {
+            MinecraftClient client = MinecraftClient.getInstance();
+            if (client.player == null || client.getNetworkHandler() == null) return "--";
+            var entry = client.getNetworkHandler().getPlayerListEntry(client.player.getUuid());
+            return entry == null ? "--" : entry.getLatency() + "ms";
+        }
+
+        private void drawStat(DrawContext ctx, int x, int y, int w, String label,
+                              String value, int red, float a) {
+            ctx.fill(x + 2, y + 3, x + w + 2, y + 43, alpha(0x40000000, a));
+            ctx.fill(x, y, x + w, y + 40, alpha(0xA80E111A, a));
+            ctx.fill(x, y, x + 3, y + 40, alpha(red, a));
+            ctx.drawText(textRenderer, Text.literal(label), x + 11, y + 7, alpha(MUTED, a), false);
+            ctx.drawText(textRenderer, Text.literal(value), x + 11, y + 20, alpha(WHITE, a), true);
+        }
+
+        private void drawFeatureCard(DrawContext ctx, int x, int y, int w, int h,
+                                     String feature, int mouseX, int mouseY, int red, float a) {
+            boolean hover = mouseX >= x && mouseX <= x + w && mouseY >= y && mouseY <= y + h;
+            boolean on = getFeatureState(feature);
+
+            int bg = hover ? 0xA51A1D29 : 0x8D0E111A;
+            ctx.fill(x + 2, y + 3, x + w + 2, y + h + 3, alpha(0x50000000, a));
+            ctx.fill(x, y, x + w, y + h, alpha(bg, a));
+            ctx.fill(x, y, x + 3, y + h, alpha(on ? red : 0x30343F, a));
+
+            ctx.drawText(textRenderer, Text.literal(feature), x + 13, y + 11,
+                    alpha(on ? WHITE : MUTED, a), on);
+            ctx.drawText(textRenderer, Text.literal(on ? "ВКЛ" : "ВЫКЛ"), x + 13, y + 29,
+                    alpha(on ? red : 0x777984, a), false);
+
+            int tx = x + w - 48;
+            int ty = y + 17;
+            ctx.fill(tx, ty, tx + 34, ty + 18, alpha(on ? red : 0x383B46, a));
+            ctx.fill(tx + (on ? 18 : 3), ty + 3, tx + (on ? 31 : 16), ty + 15,
+                    alpha(0xFFF2F2F2, a));
         }
 
         private boolean getFeatureState(String feature) {
             return switch (feature) {
                 case "Crosshair" -> crosshairEnabled;
-                case "Screen Glow", "Vignette" -> vignetteEnabled;
+                case "Screen Glow", "Soft Tint" -> screenTint;
+                case "Vignette" -> vignetteEnabled;
                 case "Hotbar Glow", "Hotbar Accent" -> hotbarGlow;
                 case "Ambient Particles" -> ambientParticles;
-                case "Screen Sparks", "Orbit Particles", "Glow Motes", "Soft Rings",
-                     "FPS Badge", "Ping Badge", "Clock Badge", "Dynamic Island" -> extra(feature);
-                case "Color Theme", "Theme", "Red Edition" -> true;
-                case "HUD Branding", "HUD" -> hudEnabled;
                 case "Accent Bar" -> accentBarEnabled;
-                case "Sky Tint", "Fog Tint", "Water Tint", "Night Accent",
-                     "Weather Overlay", "Biome Ambience", "Sunset Glow", "Moon Glow", "World Fade",
-                     "Ambient Dots", "Sparkles", "Trail Dots", "Landing Dust",
-                     "Item Highlight", "Status Cards", "Clean UI", "UI Scale", "Minimal Mode" -> extra(feature);
-                case "Reset Visuals" -> false;
-                default -> false;
+                case "HUD" -> hudEnabled;
+                case "Theme", "Red Edition" -> true;
+                case "FPS Badge", "Ping Badge", "Clock Badge", "Dynamic Island",
+                     "Soft Rings", "Orbit Particles", "Screen Sparks", "Glow Motes" -> extra(feature);
+                default -> extra(feature);
             };
         }
 
-        private void drawInfo(DrawContext ctx, int x, int y, int w, int h) {
-            int red = accent();
-            ctx.fill(x + 2, y + 3, x + w + 2, y + h + 3, 0x50000000);
-            ctx.fill(x, y, x + w, y + h, PANEL);
-            ctx.fill(x, y, x + w, y + 2, red);
-            ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("TYSM VISUALS"), x + w / 2, y + 14, red);
-
-            String[] lines = {
-                    "COSMETIC ONLY",
-                    "No reach",
-                    "No aim assist",
-                    "No hitbox changes",
-                    "No movement changes",
-                    "",
-                    "Theme: " + THEME_NAMES[themeIndex],
-                    "Particles: " + (ambientParticles ? "ON" : "OFF"),
-                    "Crosshair: " + (crosshairEnabled ? "ON" : "OFF"),
-                    "HUD: " + (hudEnabled ? "ON" : "OFF")
-            };
-
-            int yy = y + 42;
-            for (String line : lines) {
-                ctx.drawText(textRenderer, Text.literal(line), x + 12, yy,
-                        line.equals("COSMETIC ONLY") ? red : MUTED, false);
-                yy += 21;
-            }
-        }
-
-        private void drawControls(DrawContext ctx, int x, int y) {
-            int red = accent();
-            ctx.fill(x, y, x + 116, y + 48, 0xC50A0B10);
-            ctx.fill(x, y, x + 116, y + 2, red);
-            ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("ПРАВ ШИФТ"), x + 58, y + 16, WHITE);
-
-            ctx.fill(x + 126, y, x + 226, y + 48, 0xC50A0B10);
-            ctx.fill(x + 126, y, x + 226, y + 2, red);
-            ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("MOUSE"), x + 176, y + 16, WHITE);
-        }
-
-        @Override
-        public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) return super.mouseClicked(mouseX, mouseY, button);
-
-            int screenW = width;
-            int gap = screenW >= 1100 ? 12 : 8;
-            int side = screenW >= 1100 ? 215 : 0;
-            int left = 24;
-            int top = Math.max(56, height / 2 - 150);
-            int available = screenW - left - 24 - side - gap * 4;
-            int panelW = Math.max(120, Math.min(190, available / 5));
-            int panelH = Math.min(440, height - top - 42);
-            int rowGap = panelH < 425 ? 31 : 35;
-
-            for (int i = 0; i < CATEGORIES.length; i++) {
-                int x = left + i * (panelW + gap);
-                for (int row = 1; row < CATEGORIES[i].length; row++) {
-                    int ry = top + 52 + (row - 1) * rowGap;
-                    if (mouseX >= x + 5 && mouseX <= x + panelW - 5
-                            && mouseY >= ry - 5 && mouseY < ry + rowGap) {
-                        handleClick(CATEGORIES[i][row]);
-                        return true;
-                    }
-                }
-            }
-
-            return super.mouseClicked(mouseX, mouseY, button);
-        }
-
-        private void handleClick(String feature) {
+        private void handleFeature(String feature) {
             switch (feature) {
                 case "Crosshair" -> crosshairEnabled = !crosshairEnabled;
-                case "Screen Glow" -> screenTint = !screenTint;
+                case "Screen Glow", "Soft Tint" -> screenTint = !screenTint;
                 case "Vignette" -> vignetteEnabled = !vignetteEnabled;
                 case "Hotbar Glow", "Hotbar Accent" -> hotbarGlow = !hotbarGlow;
                 case "Ambient Particles" -> ambientParticles = !ambientParticles;
-                case "Color Theme", "Theme", "Red Edition" ->
-                        themeIndex = (themeIndex + 1) % THEMES.length;
-                case "HUD Branding", "HUD" -> hudEnabled = !hudEnabled;
                 case "Accent Bar" -> accentBarEnabled = !accentBarEnabled;
-                case "Soft Tint" -> screenTint = !screenTint;
+                case "HUD" -> hudEnabled = !hudEnabled;
+                case "Theme", "Red Edition" -> themeIndex = (themeIndex + 1) % THEMES.length;
                 case "Reset Visuals" -> resetVisuals();
-                case "Menu Animation", "Menu Blur", "UI Scale", "Gui Sounds", "About" ->
-                        setExtra(feature, !extra(feature));
                 default -> setExtra(feature, !extra(feature));
             }
         }
@@ -470,6 +517,46 @@ public class TysmVisualsClient implements ClientModInitializer {
         }
 
         @Override
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            if (button != GLFW.GLFW_MOUSE_BUTTON_LEFT) {
+                return super.mouseClicked(mouseX, mouseY, button);
+            }
+
+            int menuW = Math.min(1040, width - 48);
+            int menuH = Math.min(610, height - 48);
+            int x = (width - menuW) / 2;
+            int y = (height - menuH) / 2;
+            int sideW = 190;
+
+            for (int i = 0; i < NAV.length; i++) {
+                int ny = y + 94 + i * 49;
+                if (mouseX >= x + 12 && mouseX <= x + sideW - 12
+                        && mouseY >= ny && mouseY < ny + 38) {
+                    selected = i;
+                    return true;
+                }
+            }
+
+            int contentX = x + 214;
+            int contentW = menuW - 238;
+            int gap = 12;
+            int colW = (contentW - gap) / 2;
+            String[] features = FEATURE_GROUPS[Math.min(selected, FEATURE_GROUPS.length - 1)];
+
+            for (int i = 0; i < features.length; i++) {
+                int col = i % 2;
+                int row = i / 2;
+                int cx = contentX + col * (colW + gap);
+                int cy = y + 125 + row * 66;
+                if (mouseX >= cx && mouseX <= cx + colW && mouseY >= cy && mouseY <= cy + 56) {
+                    handleFeature(features[i]);
+                    return true;
+                }
+            }
+            return super.mouseClicked(mouseX, mouseY, button);
+        }
+
+        @Override
         public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
             if (keyCode == GLFW.GLFW_KEY_ESCAPE || keyCode == GLFW.GLFW_KEY_RIGHT_SHIFT) {
                 close();
@@ -478,4 +565,5 @@ public class TysmVisualsClient implements ClientModInitializer {
             return super.keyPressed(keyCode, scanCode, modifiers);
         }
     }
+
 }
