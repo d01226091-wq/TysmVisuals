@@ -12,6 +12,8 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.entity.EquipmentSlot;
+import net.minecraft.entity.LivingEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 import org.lwjgl.glfw.GLFW;
@@ -33,6 +35,14 @@ public class TysmVisualsClient implements ClientModInitializer {
     private static boolean vignetteEnabled = true;
     private static boolean hotbarGlow = true;
     private static boolean screenTint = false;
+    // Safe PvP HUD visuals: informational only, no aim/attack/movement automation.
+    private static boolean keystrokesHud = true;
+    private static boolean statsHud = true;
+    private static boolean coordinatesHud = true;
+    private static boolean movementHud = true;
+    private static boolean targetHud = true;
+    private static boolean armorHud = true;
+    private static boolean itemHud = true;
     private static boolean skyColorEnabled = true;
     private static int skyColorIndex = 0;
     private static final int[] SKY_COLORS = {0xFF4D7CFF,0xFFB52BFF,0xFFFF4D6D,0xFFFF8A3D,0xFF35D6A5,0xFF20C8FF,0xFF6D5CFF,0xFFE8E8F2};
@@ -142,6 +152,8 @@ public class TysmVisualsClient implements ClientModInitializer {
             drawHotbarAccent(ctx, w, h, red);
         }
 
+        drawPvPHud(ctx, client, w, h, red);
+
         // Pulse-inspired cosmetic effects: soft rings, orbit motes and compact status cards.
         if (extra("Soft Rings") || extra("Screen Sparks")) {
             drawPulseRings(ctx, w, h, red);
@@ -155,6 +167,126 @@ public class TysmVisualsClient implements ClientModInitializer {
         if (extra("Dynamic Island")) {
             drawDynamicIsland(ctx, w, red);
         }
+    }
+
+    private static void drawPvPHud(DrawContext ctx, MinecraftClient client, int w, int h, int red) {
+        if (client.player == null) return;
+
+        int x = 8;
+        int y = 48;
+
+        if (keystrokesHud) {
+            drawKeyBox(ctx, client, x, y, red);
+            y += 54;
+        }
+
+        if (statsHud) {
+            int fps = client.getCurrentFps();
+            String ping = "--";
+            if (client.getNetworkHandler() != null) {
+                var entry = client.getNetworkHandler().getPlayerListEntry(client.player.getUuid());
+                if (entry != null) ping = String.valueOf(entry.getLatency());
+            }
+            drawInfoBox(ctx, client, x, y, 112, 38, red,
+                    "FPS " + fps + "   PING " + ping,
+                    client.player.getHealth() + "/" + client.player.getMaxHealth() + " HP");
+            y += 44;
+        }
+
+        if (coordinatesHud) {
+            String coords = String.format("XYZ %.0f %.0f %.0f",
+                    client.player.getX(), client.player.getY(), client.player.getZ());
+            String direction = directionName(client.player.getYaw());
+            drawInfoBox(ctx, client, x, y, 150, 38, red, coords, "DIR " + direction);
+            y += 44;
+        }
+
+        if (movementHud) {
+            double speed = Math.sqrt(
+                    client.player.getVelocity().x * client.player.getVelocity().x +
+                    client.player.getVelocity().z * client.player.getVelocity().z) * 20.0;
+            String state = client.player.isSprinting() ? "SPRINT" :
+                    (client.player.isSneaking() ? "SNEAK" :
+                    (client.player.isOnGround() ? "GROUND" : "AIR"));
+            drawInfoBox(ctx, client, x, y, 150, 38, red,
+                    String.format("SPEED %.2f m/s", speed), state);
+            y += 44;
+        }
+
+        if (targetHud && client.crosshairTarget != null &&
+                client.targetedEntity instanceof LivingEntity living && living != client.player) {
+            double distance = client.player.distanceTo(living);
+            String name = living.getDisplayName().getString();
+            if (name.length() > 18) name = name.substring(0, 18);
+            drawInfoBox(ctx, client, x, y, 180, 48, red,
+                    name + "  " + String.format("%.1fm", distance),
+                    String.format("HP %.1f / %.1f", living.getHealth(), living.getMaxHealth()));
+            y += 54;
+        }
+
+        if (armorHud) {
+            int armorX = w - 120;
+            int armorY = 48;
+            ctx.fill(armorX, armorY, armorX + 112, armorY + 82, 0xB50A0B10);
+            ctx.fill(armorX, armorY, armorX + 3, armorY + 82, red);
+            ctx.drawText(client.textRenderer, Text.literal("ARMOR"), armorX + 10, armorY + 7, red, true);
+            EquipmentSlot[] slots = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
+            for (int i = 0; i < slots.length; i++) {
+                var stack = client.player.getEquippedStack(slots[i]);
+                String value = stack.isEmpty() ? "--" :
+                        (stack.isDamageable() ? String.valueOf(stack.getMaxDamage() - stack.getDamage()) : "∞");
+                ctx.drawText(client.textRenderer, Text.literal(value), armorX + 10, armorY + 22 + i * 13, MUTED, false);
+            }
+        }
+
+        if (itemHud) {
+            var stack = client.player.getMainHandStack();
+            String item = stack.isEmpty() ? "EMPTY HAND" : stack.getName().getString();
+            if (item.length() > 17) item = item.substring(0, 17);
+            String durability = stack.isDamageable()
+                    ? String.valueOf(stack.getMaxDamage() - stack.getDamage()) : "∞";
+            drawInfoBox(ctx, client, w - 120, h - 92, 112, 48, red, item, "DUR " + durability);
+        }
+    }
+
+    private static void drawKeyBox(DrawContext ctx, MinecraftClient client, int x, int y, int red) {
+        ctx.fill(x, y, x + 112, y + 48, 0xB50A0B10);
+        ctx.fill(x, y, x + 3, y + 48, red);
+        ctx.drawText(client.textRenderer, Text.literal("KEYSTROKES"), x + 9, y + 5, red, true);
+
+        String[] keys = {"W", "A", "S", "D"};
+        KeyBinding[] binds = {
+                client.options.forwardKey, client.options.leftKey,
+                client.options.backKey, client.options.rightKey
+        };
+        for (int i = 0; i < 4; i++) {
+            int bx = x + 8 + i * 24;
+            int c = binds[i].isPressed() ? red : 0x501B1C24;
+            ctx.fill(bx, y + 20, bx + 20, y + 39, c);
+            ctx.drawCenteredTextWithShadow(client.textRenderer, Text.literal(keys[i]), bx + 10, y + 26,
+                    binds[i].isPressed() ? WHITE : MUTED);
+        }
+    }
+
+    private static void drawInfoBox(DrawContext ctx, MinecraftClient client, int x, int y, int w, int h,
+                                    int red, String title, String value) {
+        ctx.fill(x + 3, y + 3, x + w + 3, y + h + 3, 0x40000000);
+        ctx.fill(x, y, x + w, y + h, 0xB50A0B10);
+        ctx.fill(x, y, x + 3, y + h, red);
+        ctx.drawText(client.textRenderer, Text.literal(title), x + 9, y + 7, WHITE, true);
+        ctx.drawText(client.textRenderer, Text.literal(value), x + 9, y + 22, MUTED, false);
+    }
+
+    private static String directionName(float yaw) {
+        float a = MathHelper.wrapDegrees(yaw);
+        if (a >= -22.5f && a < 22.5f) return "S";
+        if (a >= 22.5f && a < 67.5f) return "SW";
+        if (a >= 67.5f && a < 112.5f) return "W";
+        if (a >= 112.5f && a < 157.5f) return "NW";
+        if (a >= 157.5f || a < -157.5f) return "N";
+        if (a >= -157.5f && a < -112.5f) return "NE";
+        if (a >= -112.5f && a < -67.5f) return "E";
+        return "SE";
     }
 
     private static void drawPulseRings(DrawContext ctx, int w, int h, int red) {
@@ -412,34 +544,29 @@ public class TysmVisualsClient implements ClientModInitializer {
         }
 
         private void drawVisualsCard(DrawContext ctx, int x, int y, int w, int red, float a) {
-            String[] visuals = {"Sky Color", "Crosshair", "Vignette", "Hotbar Glow"};
-            ctx.fill(x + 3, y + 4, x + w + 3, y + 142, alpha(0x45000000, a));
-            ctx.fill(x, y, x + w, y + 138, alpha(0xB5101119, a));
-            ctx.fill(x, y, x + 3, y + 138, alpha(red, a));
+            String[] visuals = {"Keystrokes", "FPS / Ping", "Coordinates / Direction", "Target HUD", "Armor / Item HUD", "Crosshair", "Hit Visuals", "Particles", "HUD Editor"};
+            ctx.fill(x + 3, y + 4, x + w + 3, y + 178, alpha(0x45000000, a));
+            ctx.fill(x, y, x + w, y + 174, alpha(0xB5101119, a));
+            ctx.fill(x, y, x + 3, y + 174, alpha(red, a));
 
             ctx.drawText(textRenderer, Text.literal("Визуалы"), x + 13, y + 10, alpha(WHITE, a), true);
             ctx.drawText(textRenderer, Text.literal("ЛКМ по визуалу — открыть его настройки"), x + 13, y + 25, alpha(MUTED, a), false);
 
             for (int i = 0; i < visuals.length; i++) {
-                int rowY = y + 43 + i * 22;
+                int rowY = y + 43 + i * 18;
                 boolean selected = selectedVisual == i;
                 ctx.fill(x + 10, rowY - 3, x + w - 10, rowY + 16,
                         alpha(selected ? 0x382A2D38 : 0x181A1F28, a));
                 if (selected) {
-                    ctx.fill(x + 10, rowY - 3, x + 12, rowY + 16, alpha(red, a));
+                    ctx.fill(x + 10, rowY - 3, x + 12, rowY + 15, alpha(red, a));
                 }
-                ctx.drawText(textRenderer, Text.literal(visuals[i]), x + 18, rowY + 2,
+                ctx.drawText(textRenderer, Text.literal(visuals[i]), x + 18, rowY + 1,
                         alpha(selected ? WHITE : MUTED, a), selected);
             }
 
             if (selectedVisual >= 0) {
-                String setting = switch (selectedVisual) {
-                    case 0 -> "Настройки Sky Color";
-                    case 1 -> "Настройки Crosshair";
-                    case 2 -> "Настройки Vignette";
-                    default -> "Настройки Hotbar Glow";
-                };
-                ctx.drawText(textRenderer, Text.literal(setting), x + 13, y + 132,
+                String setting = "Открыть визуальную настройку: " + visuals[selectedVisual];
+                ctx.drawText(textRenderer, Text.literal(setting), x + 13, y + 162,
                         alpha(red, a), true);
             }
         }
@@ -467,10 +594,10 @@ public class TysmVisualsClient implements ClientModInitializer {
                     int contentX = x + sideW + 22;
                     int cardY = y + 70;
                     int w = menuW - sideW - 38;
-                    for (int i = 0; i < 4; i++) {
-                        int rowY = cardY + 43 + i * 22;
+                    for (int i = 0; i < 9; i++) {
+                        int rowY = cardY + 43 + i * 18;
                         if (mouseX >= contentX + 10 && mouseX <= contentX + w - 10 &&
-                                mouseY >= rowY - 3 && mouseY <= rowY + 16) {
+                                mouseY >= rowY - 3 && mouseY <= rowY + 15) {
                             selectedVisual = i;
                             return true;
                         }
