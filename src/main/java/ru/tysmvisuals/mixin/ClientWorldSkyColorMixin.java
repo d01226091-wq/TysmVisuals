@@ -1,6 +1,5 @@
 package ru.tysmvisuals.mixin;
 
-import com.llamalad7.mixinextras.sugar.Local;
 import net.minecraft.client.world.ClientWorld;
 import net.minecraft.util.math.Vec3d;
 import org.spongepowered.asm.mixin.Mixin;
