@@ -28,22 +28,22 @@ public class TysmVisualsClient implements ClientModInitializer {
     private static int themeIndex = 0;
     private static long visualTime;
 
-    private static boolean hudEnabled = true;
-    private static boolean crosshairEnabled = true;
-    private static boolean accentBarEnabled = true;
-    private static boolean ambientParticles = true;
-    private static boolean vignetteEnabled = true;
-    private static boolean hotbarGlow = true;
+    private static boolean hudEnabled = false;
+    private static boolean crosshairEnabled = false;
+    private static boolean accentBarEnabled = false;
+    private static boolean ambientParticles = false;
+    private static boolean vignetteEnabled = false;
+    private static boolean hotbarGlow = false;
     private static boolean screenTint = false;
     // Safe PvP HUD visuals: informational only, no aim/attack/movement automation.
-    private static boolean keystrokesHud = true;
-    private static boolean statsHud = true;
-    private static boolean coordinatesHud = true;
-    private static boolean movementHud = true;
-    private static boolean targetHud = true;
-    private static boolean armorHud = true;
-    private static boolean itemHud = true;
-    private static boolean skyColorEnabled = true;
+    private static boolean keystrokesHud = false;
+    private static boolean statsHud = false;
+    private static boolean coordinatesHud = false;
+    private static boolean movementHud = false;
+    private static boolean targetHud = false;
+    private static boolean armorHud = false;
+    private static boolean itemHud = false;
+    private static boolean skyColorEnabled = false;
     private static int skyColorIndex = 0;
     private static final int[] SKY_COLORS = {0xFF4D7CFF,0xFFB52BFF,0xFFFF4D6D,0xFFFF8A3D,0xFF35D6A5,0xFF20C8FF,0xFF6D5CFF,0xFFE8E8F2};
     private static final String[] SKY_COLOR_NAMES = {"BLUE","PURPLE","CRIMSON","SUNSET","MINT","CYAN","VIOLET","LIGHT"};
