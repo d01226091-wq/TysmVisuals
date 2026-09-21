@@ -180,7 +180,7 @@ public class TysmVisualsClient implements ClientModInitializer {
 
         if (extra("FPS Badge")) {
             drawStatusCard(ctx, client, x + index++ * (cardW + 5), y, cardW,
-                    "FPS", String.valueOf(MinecraftClient.getCurrentFps()), red);
+                    "FPS", String.valueOf(client.getCurrentFps()), red);
         }
         if (extra("Ping Badge") && client.player != null && client.getNetworkHandler() != null) {
             var entry = client.getNetworkHandler().getPlayerListEntry(client.player.getUuid());
