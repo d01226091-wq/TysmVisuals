@@ -316,8 +316,8 @@ public class TysmVisualsClient implements ClientModInitializer {
             ctx.fill(0, 0, width, height, alpha(0xB0000000, a));
             drawBackgroundGlow(ctx, red, a);
 
-            int menuW = Math.min(1040, width - 48);
-            int menuH = Math.min(610, height - 48);
+            int menuW = Math.min(820, width - 64);
+            int menuH = Math.min(500, height - 64);
             int x = (width - menuW) / 2;
             int y = (height - menuH) / 2;
             int sx = slide(x, a, 28);
@@ -352,14 +352,14 @@ public class TysmVisualsClient implements ClientModInitializer {
         private void drawSidebar(DrawContext ctx, int x, int y, int menuW, int menuH,
                                  int mouseX, int mouseY, float a) {
             int red = accent();
-            int sideW = 190;
+            int sideW = 154;
 
             ctx.fill(x, y, x + sideW, y + menuH, alpha(0xC30A0D16, a));
             ctx.fill(x + sideW - 1, y + 20, x + sideW, y + menuH - 20, alpha(0x442A2D38, a));
 
             ctx.drawText(textRenderer, Text.literal("✦"), x + 20, y + 25, alpha(red, a), true);
-            ctx.drawText(textRenderer, Text.literal("Tysm"), x + 43, y + 20, alpha(WHITE, a), true);
-            ctx.drawText(textRenderer, Text.literal("Visuals"), x + 43, y + 34, alpha(red, a), true);
+            ctx.drawText(textRenderer, Text.literal("Tysm"), x + 38, y + 20, alpha(WHITE, a), true);
+            ctx.drawText(textRenderer, Text.literal("Visuals"), x + 38, y + 34, alpha(red, a), true);
             ctx.drawText(textRenderer, Text.literal("COSMETIC CLIENT"), x + 20, y + 58, alpha(MUTED, a), false);
 
             for (int i = 0; i < NAV.length; i++) {
@@ -384,7 +384,7 @@ public class TysmVisualsClient implements ClientModInitializer {
                 };
                 ctx.drawText(textRenderer, Text.literal(icon), x + 24, ny + 11,
                         alpha(selected == i ? red : MUTED, a), true);
-                ctx.drawText(textRenderer, Text.literal(NAV[i]), x + 48, ny + 11,
+                ctx.drawText(textRenderer, Text.literal(NAV[i]), x + 43, ny + 11,
                         alpha(selected == i ? WHITE : MUTED, a), selected == i);
             }
 
@@ -396,8 +396,8 @@ public class TysmVisualsClient implements ClientModInitializer {
         private void drawMain(DrawContext ctx, int x, int y, int menuW, int menuH,
                               int mouseX, int mouseY, float a) {
             int red = accent();
-            int contentX = x + 214;
-            int contentW = menuW - 238;
+            int contentX = x + 174;
+            int contentW = menuW - 196;
 
             ctx.drawText(textRenderer, Text.literal(NAV[selected]), contentX, y + 25,
                     alpha(WHITE, a), true);
@@ -405,9 +405,14 @@ public class TysmVisualsClient implements ClientModInitializer {
                     selected == 0 ? "Быстрый доступ к визуальным эффектам" :
                     "Настройка " + NAV[selected].toLowerCase()),
                     contentX, y + 42, alpha(MUTED, a), false);
+            // Compact description area: explains the feature under the cursor.
+            String hovered = getHoveredFeature(mouseX, mouseY, x, y, menuW, menuH);
+            String description = hovered == null ? "Наведи на функцию, чтобы увидеть краткое описание." : featureDescription(hovered);
+            ctx.fill(contentX, y + 58, x + menuW - 18, y + 84, alpha(0x501A1D28, a));
+            ctx.drawText(textRenderer, Text.literal(description), contentX + 9, y + 67, alpha(MUTED, a), false);
 
             // Top performance cards.
-            int cardY = y + 70;
+            int cardY = y + 92;
             drawStat(ctx, contentX, cardY, 118, "FPS",
                     String.valueOf(MinecraftClient.getInstance().getCurrentFps()), red, a);
             drawStat(ctx, contentX + 128, cardY, 118, "PING",
@@ -415,7 +420,7 @@ public class TysmVisualsClient implements ClientModInitializer {
             drawStat(ctx, contentX + 256, cardY, 118, "THEME",
                     THEME_NAMES[themeIndex], red, a);
 
-            int gridY = y + 125;
+            int gridY = y + 145;
             int gap = 12;
             int colW = (contentW - gap) / 2;
             String[] features = FEATURE_GROUPS[Math.min(selected, FEATURE_GROUPS.length - 1)];
@@ -428,11 +433,62 @@ public class TysmVisualsClient implements ClientModInitializer {
                 drawFeatureCard(ctx, cx, cy, colW, 56, features[i], mouseX, mouseY, red, a);
             }
 
-            int footerY = y + menuH - 38;
+            int footerY = y + menuH - 28;
             ctx.drawText(textRenderer, Text.literal("RIGHT SHIFT  •  CLOSE"), contentX, footerY,
                     alpha(MUTED, a), false);
             ctx.drawText(textRenderer, Text.literal("COSMETIC ONLY"), x + menuW - 142, footerY,
                     alpha(red, a), true);
+        }
+
+        private String getHoveredFeature(int mouseX, int mouseY, int x, int y, int menuW, int menuH) {
+            int contentX = x + 174;
+            int contentW = menuW - 196;
+            int gap = 10;
+            int colW = (contentW - gap) / 2;
+            String[] features = FEATURE_GROUPS[Math.min(selected, FEATURE_GROUPS.length - 1)];
+            for (int i = 0; i < features.length; i++) {
+                int col = i % 2, row = i / 2;
+                int cx = contentX + col * (colW + gap);
+                int cy = y + 145 + row * 60;
+                if (mouseX >= cx && mouseX <= cx + colW && mouseY >= cy && mouseY <= cy + 52) return features[i];
+            }
+            return null;
+        }
+
+        private String featureDescription(String feature) {
+            return switch (feature) {
+                case "Crosshair" -> "Меняет внешний вид прицела.";
+                case "Screen Glow" -> "Добавляет мягкое свечение поверх экрана.";
+                case "Vignette" -> "Затемняет края экрана для атмосферы.";
+                case "Hotbar Glow", "Hotbar Accent" -> "Добавляет подсветку панели быстрого доступа.";
+                case "Ambient Particles", "Ambient Dots" -> "Показывает лёгкие декоративные частицы.";
+                case "Accent Bar" -> "Добавляет тонкую цветную линию в HUD.";
+                case "Soft Tint" -> "Накладывает лёгкий цветовой оттенок.";
+                case "HUD" -> "Включает декоративные элементы интерфейса.";
+                case "FPS Badge" -> "Показывает FPS в небольшом бейдже.";
+                case "Ping Badge" -> "Показывает задержку соединения.";
+                case "Clock Badge" -> "Показывает игровое время в HUD.";
+                case "Dynamic Island" -> "Показывает компактный декоративный индикатор.";
+                case "Soft Rings", "Мягкие кольца" -> "Рисует плавные светящиеся кольца.";
+                case "Orbit Particles", "Орбитальные частицы" -> "Добавляет частицы, вращающиеся вокруг центра.";
+                case "Screen Sparks", "Искры экрана" -> "Добавляет короткие декоративные искры.";
+                case "Glow Motes" -> "Добавляет мягкие светящиеся точки.";
+                case "Trail Dots" -> "Создаёт декоративный след из точек.";
+                case "Particle Fade" -> "Плавно затухают декоративные частицы.";
+                case "Landing Dust" -> "Показывает декоративную пыль при приземлении.";
+                case "Sparkles" -> "Добавляет маленькие блёстки.";
+                case "Biome Ambience" -> "Добавляет декоративную атмосферу биома.";
+                case "Sunset Glow" -> "Добавляет мягкое свечение заката.";
+                case "Moon Glow" -> "Добавляет декоративное свечение луны.";
+                case "Weather Overlay" -> "Добавляет визуальный слой погоды.";
+                case "Menu Blur" -> "Добавляет эффект размытия меню.";
+                case "Menu Animation" -> "Включает плавную анимацию меню.";
+                case "Gui Sounds" -> "Использует декоративные звуки интерфейса.";
+                case "Minimal Mode" -> "Убирает часть второстепенных элементов HUD.";
+                case "Red Edition" -> "Переключает цветовую тему клиента.";
+                case "Reset Visuals" -> "Возвращает визуальные настройки по умолчанию.";
+                default -> "Косметическая настройка внешнего вида клиента.";
+            };
         }
 
         private String getPing() {
@@ -522,8 +578,8 @@ public class TysmVisualsClient implements ClientModInitializer {
                 return super.mouseClicked(mouseX, mouseY, button);
             }
 
-            int menuW = Math.min(1040, width - 48);
-            int menuH = Math.min(610, height - 48);
+            int menuW = Math.min(820, width - 64);
+            int menuH = Math.min(500, height - 64);
             int x = (width - menuW) / 2;
             int y = (height - menuH) / 2;
             int sideW = 190;
@@ -537,8 +593,8 @@ public class TysmVisualsClient implements ClientModInitializer {
                 }
             }
 
-            int contentX = x + 214;
-            int contentW = menuW - 238;
+            int contentX = x + 174;
+            int contentW = menuW - 196;
             int gap = 12;
             int colW = (contentW - gap) / 2;
             String[] features = FEATURE_GROUPS[Math.min(selected, FEATURE_GROUPS.length - 1)];
