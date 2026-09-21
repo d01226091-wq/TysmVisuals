@@ -86,7 +86,7 @@ public class TysmVisualsClient implements ClientModInitializer {
     private static int accent() {
         return THEMES[themeIndex];
     }
-
+\n    public static boolean isSkyColorEnabled() {\n        return skyColorEnabled;\n    }\n\n    public static int getSkyColor() {\n        return SKY_COLORS[skyColorIndex] & 0xFFFFFF;\n    }\n
     private static boolean extra(String name) {
         return EXTRA.getOrDefault(name, false);
     }
