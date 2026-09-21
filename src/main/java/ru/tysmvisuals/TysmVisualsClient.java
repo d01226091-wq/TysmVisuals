@@ -69,6 +69,11 @@ public class TysmVisualsClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             pulse += 0.055f;
             visualTime++;
+
+            // Open the cosmetic menu with Right Shift when no other screen is open.
+            if (menuKey.wasPressed() && client.currentScreen == null) {
+                client.setScreen(new TysmMenuScreen());
+            }
         });
 
         HudRenderCallback.EVENT.register((context, tickDelta) -> renderVisuals(context));
