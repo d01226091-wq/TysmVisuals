@@ -24,6 +24,7 @@ public class TysmVisualsClient implements ClientModInitializer {
     private static KeyBinding menuKey;
     private static float pulse;
     private static int themeIndex = 0;
+    private static long visualTime;
 
     private static boolean hudEnabled = true;
     private static boolean crosshairEnabled = true;
@@ -65,7 +66,10 @@ public class TysmVisualsClient implements ClientModInitializer {
                 GLFW.GLFW_KEY_RIGHT_SHIFT,
                 "category.tysmvisuals"));
 
-        ClientTickEvents.END_CLIENT_TICK.register(client -> pulse += 0.055f);
+        ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            pulse += 0.055f;
+            visualTime++;
+        });
 
         HudRenderCallback.EVENT.register((context, tickDelta) -> renderVisuals(context));
     }
@@ -98,7 +102,8 @@ public class TysmVisualsClient implements ClientModInitializer {
             drawVignette(ctx, w, h, red);
         }
 
-        if (ambientParticles || extra("Ambient Dots") || extra("Sparkles") || extra("Glow Motes")) {
+        if (ambientParticles || extra("Ambient Dots") || extra("Sparkles") || extra("Glow Motes")
+                || extra("Trail Dots") || extra("Particle Fade")) {
             drawAmbientParticles(ctx, w, h, red, client.player.age);
         }
 
@@ -120,6 +125,95 @@ public class TysmVisualsClient implements ClientModInitializer {
         if (hotbarGlow) {
             drawHotbarAccent(ctx, w, h, red);
         }
+
+        // Pulse-inspired cosmetic effects: soft rings, orbit motes and compact status cards.
+        if (extra("Soft Rings") || extra("Screen Sparks")) {
+            drawPulseRings(ctx, w, h, red);
+        }
+        if (extra("Orbit Particles") || extra("Glow Motes")) {
+            drawOrbitMotes(ctx, w, h, red);
+        }
+        if (extra("FPS Badge") || extra("Ping Badge") || extra("Clock Badge")) {
+            drawStatusCards(ctx, client, w, h, red);
+        }
+        if (extra("Dynamic Island")) {
+            drawDynamicIsland(ctx, w, red);
+        }
+    }
+
+    private static void drawPulseRings(DrawContext ctx, int w, int h, int red) {
+        float t = visualTime * 0.035f;
+        int cx = w / 2;
+        int cy = h / 2;
+        for (int i = 0; i < 3; i++) {
+            float phase = (t + i * 2.1f) % 5.0f;
+            int radius = 10 + (int)(phase * 12f);
+            int alpha = Math.max(8, 38 - (int)(phase * 6f));
+            int c = (alpha << 24) | (red & 0xFFFFFF);
+            ctx.fill(cx - radius, cy - radius, cx + radius, cy - radius + 1, c);
+            ctx.fill(cx - radius, cy + radius - 1, cx + radius, cy + radius, c);
+            ctx.fill(cx - radius, cy - radius, cx - radius + 1, cy + radius, c);
+            ctx.fill(cx + radius - 1, cy - radius, cx + radius, cy + radius, c);
+        }
+    }
+
+    private static void drawOrbitMotes(DrawContext ctx, int w, int h, int red) {
+        float t = visualTime * 0.022f;
+        float cx = w * 0.5f;
+        float cy = h * 0.52f;
+        for (int i = 0; i < 12; i++) {
+            float a = t + i * 0.5236f;
+            float r = 24f + (i % 3) * 11f;
+            int x = (int)(cx + MathHelper.cos(a) * r);
+            int y = (int)(cy + MathHelper.sin(a * 1.25f) * r * 0.65f);
+            int alpha = 28 + (i % 4) * 12;
+            int size = 1 + (i % 2);
+            ctx.fill(x, y, x + size, y + size, (alpha << 24) | (red & 0xFFFFFF));
+        }
+    }
+
+    private static void drawStatusCards(DrawContext ctx, MinecraftClient client, int w, int h, int red) {
+        int x = 8;
+        int y = h - 70;
+        int cardW = 68;
+        int index = 0;
+
+        if (extra("FPS Badge")) {
+            drawStatusCard(ctx, client, x + index++ * (cardW + 5), y, cardW,
+                    "FPS", String.valueOf(MinecraftClient.getCurrentFps()), red);
+        }
+        if (extra("Ping Badge") && client.player != null && client.getNetworkHandler() != null) {
+            var entry = client.getNetworkHandler().getPlayerListEntry(client.player.getUuid());
+            String ping = entry == null ? "--" : String.valueOf(entry.getLatency());
+            drawStatusCard(ctx, client, x + index++ * (cardW + 5), y, cardW, "PING", ping, red);
+        }
+        if (extra("Clock Badge")) {
+            java.time.LocalTime now = java.time.LocalTime.now();
+            String time = String.format("%02d:%02d", now.getHour(), now.getMinute());
+            drawStatusCard(ctx, client, x + index * (cardW + 5), y, cardW, "TIME", time, red);
+        }
+    }
+
+    private static void drawStatusCard(DrawContext ctx, MinecraftClient client, int x, int y, int w,
+                                       String label, String value, int red) {
+        ctx.fill(x + 2, y + 2, x + w + 2, y + 25, 0x40000000);
+        ctx.fill(x, y, x + w, y + 23, 0xB00A0B10);
+        ctx.fill(x, y, x + 2, y + 23, red);
+        ctx.drawText(client.textRenderer, Text.literal(label), x + 7, y + 4, MUTED, false);
+        ctx.drawText(client.textRenderer, Text.literal(value), x + 7, y + 13, WHITE, true);
+    }
+
+    private static void drawDynamicIsland(DrawContext ctx, int w, int red) {
+        int width = 150;
+        int x = w / 2 - width / 2;
+        int y = 8;
+        float wave = (MathHelper.sin(pulse * 0.8f) + 1f) * 0.5f;
+        int alpha = 0xB0 + (int)(wave * 0x20);
+        ctx.fill(x + 3, y + 3, x + width + 3, y + 28, 0x50000000);
+        ctx.fill(x, y, x + width, y + 25, (alpha << 24) | 0x08090D);
+        ctx.fill(x, y, x + 3, y + 25, red);
+        ctx.drawCenteredTextWithShadow(MinecraftClient.getInstance().textRenderer,
+                Text.literal("TYSM  •  VISUALS"), x + width / 2, y + 8, red);
     }
 
     private static void drawBrand(DrawContext ctx, MinecraftClient client) {
@@ -257,6 +351,8 @@ public class TysmVisualsClient implements ClientModInitializer {
                 case "Screen Glow", "Vignette" -> vignetteEnabled;
                 case "Hotbar Glow", "Hotbar Accent" -> hotbarGlow;
                 case "Ambient Particles" -> ambientParticles;
+                case "Screen Sparks", "Orbit Particles", "Glow Motes", "Soft Rings",
+                     "FPS Badge", "Ping Badge", "Clock Badge", "Dynamic Island" -> extra(feature);
                 case "Color Theme", "Theme", "Red Edition" -> true;
                 case "HUD Branding", "HUD" -> hudEnabled;
                 case "Accent Bar" -> accentBarEnabled;
