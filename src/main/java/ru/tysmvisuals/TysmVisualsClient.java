@@ -267,6 +267,11 @@ public class TysmVisualsClient implements ClientModInitializer {
 
     private static class TysmMenuScreen extends Screen {
         private long openedAt;
+        private int selectedTab = 0;
+
+        private static final String[] TABS = {
+                "Главное", "Визуалы", "Утилиты", "Косметика", "Настройки"
+        };
 
         private TysmMenuScreen() {
             super(Text.literal("TysmVisuals"));
@@ -296,31 +301,123 @@ public class TysmVisualsClient implements ClientModInitializer {
 
             ctx.fill(0, 0, width, height, alpha(0x90000000, a));
 
-            // Very small clean panel: no feature list, no switches, no settings.
-            int menuW = Math.min(280, width - 32);
-            int menuH = Math.min(160, height - 32);
+            int menuW = Math.min(430, width - 32);
+            int menuH = Math.min(230, height - 32);
             int x = (width - menuW) / 2;
             int y = (height - menuH) / 2;
-            int sx = x + (int)((1f - a) * 16f);
+            int sx = x + (int)((1f - a) * 18f);
             int sy = y + (int)((1f - a) * 10f);
 
-            ctx.fill(sx + 4, sy + 5, sx + menuW + 4, sy + menuH + 5, alpha(0x60000000, a));
-            ctx.fill(sx, sy, sx + menuW, sy + menuH, alpha(0xE9080B16, a));
+            // Main glass panel.
+            ctx.fill(sx + 5, sy + 6, sx + menuW + 5, sy + menuH + 6, alpha(0x65000000, a));
+            ctx.fill(sx, sy, sx + menuW, sy + menuH, alpha(0xEC080A11, a));
+
+            // Sidebar.
+            int sideW = 112;
+            ctx.fill(sx, sy, sx + sideW, sy + menuH, alpha(0xE20B0C14, a));
+            ctx.fill(sx + sideW, sy, sx + sideW + 1, sy + menuH, alpha(0x382A2D38, a));
             ctx.fill(sx, sy, sx + menuW, sy + 2, alpha(red, a));
 
-            ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("TYSM VISUALS"),
-                    sx + menuW / 2, sy + 32, alpha(red, a));
-            ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("VISUAL CLIENT"),
-                    sx + menuW / 2, sy + 52, alpha(WHITE, a));
+            ctx.drawText(textRenderer, Text.literal("TYSM"), sx + 16, sy + 16,
+                    alpha(red, a), true);
+            ctx.drawText(textRenderer, Text.literal("VISUALS"), sx + 16, sy + 29,
+                    alpha(WHITE, a), true);
 
-            ctx.fill(sx + 28, sy + 78, sx + menuW - 28, sy + 79, alpha(0x402A2D38, a));
-            ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("RIGHT SHIFT / ESC — CLOSE"),
-                    sx + menuW / 2, sy + 94, alpha(MUTED, a));
+            for (int i = 0; i < TABS.length; i++) {
+                int rowY = sy + 55 + i * 29;
+                boolean selected = selectedTab == i;
 
-            ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("1.21.4 • FABRIC"),
-                    sx + menuW / 2, sy + 118, alpha(MUTED, a));
+                if (selected) {
+                    ctx.fill(sx + 8, rowY - 4, sx + sideW - 8, rowY + 19,
+                            alpha(0x302A2D38, a));
+                    ctx.fill(sx + 8, rowY - 4, sx + 10, rowY + 19,
+                            alpha(red, a));
+                }
 
-            super.render(ctx, mouseX, mouseY, delta);
+                ctx.drawText(textRenderer, Text.literal(TABS[i]), sx + 18, rowY + 2,
+                        alpha(selected ? WHITE : MUTED, a), selected);
+            }
+
+            int contentX = sx + sideW + 22;
+            int contentW = menuW - sideW - 38;
+
+            String title = TABS[selectedTab];
+            ctx.drawText(textRenderer, Text.literal(title), contentX, sy + 20,
+                    alpha(WHITE, a), true);
+            ctx.drawText(textRenderer, Text.literal(tabSubtitle(selectedTab)),
+                    contentX, sy + 36, alpha(MUTED, a), false);
+
+            ctx.fill(contentX, sy + 58, contentX + contentW, sy + 59,
+                    alpha(0x402A2D38, a));
+
+            // Clean category preview, without toggles or gameplay features.
+            drawInfoCard(ctx, contentX, sy + 75, contentW, red, a, tabCardTitle(selectedTab),
+                    tabCardText(selectedTab));
+
+            ctx.drawText(textRenderer, Text.literal("RIGHT SHIFT / ESC — CLOSE"),
+                    contentX, sy + menuH - 25, alpha(MUTED, a), false);
+        }
+
+        private String tabSubtitle(int tab) {
+            return switch (tab) {
+                case 0 -> "Главная панель TysmVisuals";
+                case 1 -> "Визуальные эффекты клиента";
+                case 2 -> "Полезные визуальные инструменты";
+                case 3 -> "Косметические элементы";
+                default -> "Оформление и параметры интерфейса";
+            };
+        }
+
+        private String tabCardTitle(int tab) {
+            return switch (tab) {
+                case 0 -> "Добро пожаловать";
+                case 1 -> "Visual Effects";
+                case 2 -> "Utilities";
+                case 3 -> "Cosmetics";
+                default -> "Client Settings";
+            };
+        }
+
+        private String tabCardText(int tab) {
+            return switch (tab) {
+                case 0 -> "TysmVisuals • 1.21.4 • Fabric";
+                case 1 -> "Чистые эффекты без изменения игрового процесса";
+                case 2 -> "Компактные элементы для визуального интерфейса";
+                case 3 -> "Стиль, тема и косметическое оформление";
+                default -> "Минималистичный интерфейс и анимация";
+            };
+        }
+
+        private void drawInfoCard(DrawContext ctx, int x, int y, int w, int red,
+                                  float a, String title, String text) {
+            ctx.fill(x + 3, y + 4, x + w + 3, y + 65, alpha(0x45000000, a));
+            ctx.fill(x, y, x + w, y + 61, alpha(0xB5101119, a));
+            ctx.fill(x, y, x + 3, y + 61, alpha(red, a));
+            ctx.drawText(textRenderer, Text.literal(title), x + 13, y + 12,
+                    alpha(WHITE, a), true);
+            ctx.drawText(textRenderer, Text.literal(text), x + 13, y + 31,
+                    alpha(MUTED, a), false);
+        }
+
+        @Override
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            if (button == 0) {
+                int menuW = Math.min(430, width - 32);
+                int menuH = Math.min(230, height - 32);
+                int x = (width - menuW) / 2;
+                int y = (height - menuH) / 2;
+                int sideW = 112;
+
+                if (mouseX >= x && mouseX <= x + sideW &&
+                        mouseY >= y + 51 && mouseY <= y + 55 + TABS.length * 29) {
+                    int index = (int)((mouseY - (y + 51)) / 29);
+                    if (index >= 0 && index < TABS.length) {
+                        selectedTab = index;
+                        return true;
+                    }
+                }
+            }
+            return super.mouseClicked(mouseX, mouseY, button);
         }
 
         @Override
