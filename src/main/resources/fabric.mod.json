@@ -1,0 +1,15 @@
+{
+  "schemaVersion": 1,
+  "id": "tysmvisuals",
+  "version": "${version}",
+  "name": "TysmVisuals",
+  "description": "Red PvP visual client mod for Minecraft 1.21.4.",
+  "authors": ["d01226091-wq"],
+  "environment": "client",
+  "entrypoints": { "client": ["ru.tysmvisuals.TysmVisualsClient"] },
+  "depends": {
+    "fabricloader": ">=0.16.9",
+    "minecraft": "1.21.4",
+    "fabric-api": "*"
+  }
+}
