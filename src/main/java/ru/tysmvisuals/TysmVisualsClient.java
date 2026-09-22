@@ -88,6 +88,7 @@ public class TysmVisualsClient implements ClientModInitializer {
     };
 
     private static final Map<String, Boolean> EXTRA = new HashMap<>();
+    private static String selectedUtility = null;
 
     @Override
     public void onInitializeClient() {
@@ -597,41 +598,71 @@ public class TysmVisualsClient implements ClientModInitializer {
             if (mouseX >= x && mouseX <= x + sideW && mouseY >= y + 43 && mouseY <= y + 43 + TABS.length * 28) {
                 int i = (int)((mouseY - (y + 43)) / 28);
                 if (i >= 0 && i < TABS.length) return switch (i) {
-                    case 0 -> "Главная — основная панель клиента";
-                    case 1 -> "Визуалы — экранные эффекты и HUD";
-                    case 2 -> "Утилиты — полезные визуальные элементы";
-                    case 3 -> "Косметика — тема и оформление";
-                    default -> "Настройки — параметры TysmVisuals";
+                    case 0 -> "Главная — управление HUD и быстрый доступ";
+                    case 1 -> "Визуалы — включение и настройка экранных эффектов";
+                    case 2 -> "Утилиты — информационные элементы на экране";
+                    case 3 -> "Косметика — оформление интерфейса и HUD";
+                    default -> "Настройки — параметры масштаба, частиц и меню";
                 };
             }
-            int contentX = x + sideW + 15, contentW = menuW - sideW - 25;
-            if (selectedTab == 1 && selectedVisual < 0) {
-                int listY = y + 14 + 35, rowH = 25, colW = (contentW - 5) / 2;
-                for (int i = 0; i < VISUALS.length; i++) {
-                    int row = i / 2, col = i % 2, vr = row - visualScroll;
-                    if (vr < 0 || vr >= 6) continue;
-                    int yy = listY + vr * rowH, xx = contentX + col * (colW + 5);
-                    if (mouseX >= xx && mouseX <= xx + colW && mouseY >= yy && mouseY <= yy + 21) return VISUALS[i];
+            int contentX=x+sideW+15, contentW=menuW-sideW-25;
+            if(selectedTab==1 && selectedVisual<0){
+                int listY=y+14+35,rowH=25,colW=(contentW-5)/2;
+                for(int i=0;i<VISUALS.length;i++){
+                    int row=i/2,col=i%2,vr=row-visualScroll;
+                    if(vr<0||vr>=6) continue;
+                    int yy=listY+vr*rowH,xx=contentX+col*(colW+5);
+                    if(mouseX>=xx&&mouseX<=xx+colW&&mouseY>=yy&&mouseY<=yy+21) return visualDescription(VISUALS[i]);
                 }
             }
-            if (selectedTab == 2 || selectedTab == 3) {
-                String[] names = selectedTab == 2 ? new String[]{"FPS Badge","Ping Badge","Clock Badge","Dynamic Island","Status Cards"} : new String[]{"Theme","HUD Branding","Hotbar Accent","Clean UI","Red Edition"};
-                for (int i = 0; i < names.length; i++) {
-                    int yy = y + 14 + 28 + i * 28;
-                    if (mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= yy && mouseY <= yy + 22) return names[i];
+            if(selectedTab==2||selectedTab==3){
+                String[] names=selectedTab==2?new String[]{"FPS Badge","Ping Badge","Clock Badge","Dynamic Island","Status Cards"}:new String[]{"Theme","HUD Branding","Hotbar Accent","Clean UI","Red Edition"};
+                for(int i=0;i<names.length;i++){
+                    int yy=y+14+28+i*28;
+                    if(mouseX>=contentX&&mouseX<=contentX+contentW&&mouseY>=yy&&mouseY<=yy+22) return utilityDescription(names[i]);
                 }
             }
-            if (selectedTab == 4) {
-                String[] names = {"UI SCALE","PARTICLES","EFFECT SPEED","MAIN MENU","THEME"};
-                int[] ys = {38,65,92,119,146};
-                for (int i = 0; i < ys.length; i++) {
-                    int yy = y + 14 + ys[i];
-                    if (mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= yy && mouseY <= yy + 22) return names[i];
-                }
+            if(selectedTab==4){
+                String[] names={"UI SCALE","PARTICLES","EFFECT SPEED","MAIN MENU","THEME"}; int[] ys={38,65,92,119,146};
+                for(int i=0;i<ys.length;i++){int yy=y+14+ys[i];if(mouseX>=contentX&&mouseX<=contentX+contentW&&mouseY>=yy&&mouseY<=yy+22)return settingDescription(names[i]);}
             }
-            if (selectedTab == 0 && mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= y + 14 + 119 && mouseY <= y + 14 + 153) return "HUD Editor — перетаскивание элементов мышью";
-            return null;
+            return selectedTab==0 ? "HUD Editor — позволяет свободно перемещать экранные элементы" : null;
         }
+        private static String visualDescription(String n){return switch(n){
+            case "Keystrokes"->"Показывает нажатия WASD и состояние клавиш";
+            case "FPS / Ping"->"Показывает FPS, пинг и здоровье игрока";
+            case "Coordinates"->"Показывает координаты и направление взгляда";
+            case "Movement HUD"->"Показывает скорость и текущее состояние движения";
+            case "Target HUD"->"Показывает имя, дистанцию и здоровье сущности под прицелом";
+            case "Armor HUD"->"Показывает оставшуюся прочность надетой брони";
+            case "Item HUD"->"Показывает предмет в руке и его прочность";
+            case "Crosshair"->"Заменяет стандартный прицел стилизованным";
+            case "Particles"->"Добавляет декоративные частицы на экран";
+            case "Vignette"->"Добавляет мягкое затемнение по краям экрана";
+            case "Hotbar Glow"->"Добавляет декоративное свечение вокруг хотбара";
+            case "HUD Branding"->"Показывает небольшую надпись TysmVisuals";
+            default->"Декоративный визуальный эффект без изменения геймплея";
+        };}
+        private static String utilityDescription(String n){return switch(n){
+            case "FPS Badge"->"Показывает текущую частоту кадров";
+            case "Ping Badge"->"Показывает задержку до сервера";
+            case "Clock Badge"->"Показывает текущее время";
+            case "Dynamic Island"->"Показывает компактную декоративную панель";
+            case "Status Cards"->"Показывает компактные информационные карточки";
+            case "Theme"->"Меняет цветовую тему интерфейса";
+            case "HUD Branding"->"Включает брендинг TysmVisuals на HUD";
+            case "Hotbar Accent"->"Добавляет акцентное оформление хотбара";
+            case "Clean UI"->"Упрощает декоративное оформление интерфейса";
+            default->"Красная тема оформления TysmVisuals";
+        };}
+        private static String settingDescription(String n){return switch(n){
+            case "UI SCALE"->"Меняет масштаб элементов интерфейса";
+            case "PARTICLES"->"Настраивает количество декоративных частиц";
+            case "EFFECT SPEED"->"Настраивает скорость анимации эффектов";
+            case "MAIN MENU"->"Включает собственное главное меню TysmVisuals";
+            default->"Переключает цветовую тему клиента";
+        };}
+
 
         private void drawVisualPanel(DrawContext ctx, int x, int y, int w, int red, float a) {
             ctx.drawText(textRenderer, Text.literal("Визуалы"), x, y + 2, alpha(WHITE, a), true);
@@ -821,16 +852,13 @@ public class TysmVisualsClient implements ClientModInitializer {
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            int menuW = Math.min(370, width - 28);
-            int menuH = Math.min(218, height - 28);
+            MinecraftClient client = MinecraftClient.getInstance();
             int x = (width - menuW) / 2;
             int y = (height - menuH) / 2;
-            int sideW = 94;
+            int sideW = 92;
 
-            // RMB = instantly toggle. LMB = open the settings/details.
             if (button == 0) {
-                if (mouseX >= x && mouseX <= x + sideW &&
-                        mouseY >= y + 43 && mouseY <= y + 47 + TABS.length * 28) {
+                if (mouseX >= x && mouseX <= x + sideW && mouseY >= y + 43 && mouseY <= y + 43 + TABS.length * 28) {
                     int index = (int)((mouseY - (y + 43)) / 28);
                     if (index >= 0 && index < TABS.length) {
                         selectedTab = index;
@@ -839,99 +867,83 @@ public class TysmVisualsClient implements ClientModInitializer {
                     }
                 }
 
-                if (selectedTab == 1) {
+                if (selectedTab == 1 && selectedVisual < 0) {
                     int contentX = x + sideW + 15;
                     int contentW = menuW - sideW - 25;
                     int listY = y + 14 + 35;
-                    if (selectedVisual >= 0) {
-                        // LMB cycles the selected visual's configuration.
-                        cycleVisualSetting(selectedVisual);
-                        return true;
-                    }
                     int rowH = 25;
                     int visibleRows = 6;
                     int colW = (contentW - 5) / 2;
                     for (int i = 0; i < VISUALS.length; i++) {
-                        int row = i / 2;
-                        int col = i % 2;
-                        int visibleRow = row - visualScroll;
+                        int row = i / 2, col = i % 2, visibleRow = row - visualScroll;
                         if (visibleRow < 0 || visibleRow >= visibleRows) continue;
                         int rowY = listY + visibleRow * rowH;
                         int colX = contentX + col * (colW + 5);
-                        if (mouseX >= colX && mouseX <= colX + colW &&
-                                mouseY >= rowY && mouseY <= rowY + 21) {
-                            selectedVisual = i;
+                        if (mouseX >= colX && mouseX <= colX + colW && mouseY >= rowY && mouseY <= rowY + 21) {
+                            selectedVisual = i; // LMB opens configuration
+                            return true;
+                        }
+                    }
+                }
+
+                if (selectedVisual >= 0 && selectedTab == 1) {
+                    cycleVisualSetting(selectedVisual);
+                    return true;
+                }
+
+                if (selectedTab == 2) {
+                    String[] names = {"FPS Badge", "Ping Badge", "Clock Badge", "Dynamic Island", "Status Cards"};
+                    int contentX = x + sideW + 15, contentW = menuW - sideW - 25;
+                    for (int i = 0; i < names.length; i++) {
+                        int yy = y + 14 + 28 + i * 28;
+                        if (mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= yy && mouseY <= yy + 22) {
+                            selectedUtility = names[i]; // LMB opens configuration
+                            return true;
+                        }
+                    }
+                }
+
+                if (selectedTab == 3) {
+                    String[] names = {"Theme", "HUD Branding", "Hotbar Accent", "Clean UI", "Red Edition"};
+                    int contentX = x + sideW + 15, contentW = menuW - sideW - 25;
+                    for (int i = 0; i < names.length; i++) {
+                        int yy = y + 14 + 28 + i * 28;
+                        if (mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= yy && mouseY <= yy + 22) {
+                            selectedUtility = names[i]; // LMB opens configuration
                             return true;
                         }
                     }
                 }
             }
 
-            if (button == 0 && selectedTab == 2) {
-                int contentX = x + sideW + 15, contentW = menuW - sideW - 25;
-                String[] names = {"FPS Badge", "Ping Badge", "Clock Badge", "Dynamic Island", "Status Cards"};
-                for (int i = 0; i < names.length; i++) {
-                    int yy = y + 14 + 28 + i * 28;
-                    if (mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= yy && mouseY <= yy + 22) {
-                        setExtra(names[i], !extra(names[i])); return true;
-                    }
-                }
-            }
-            if (button == 0 && selectedTab == 3) {
-                int contentX = x + sideW + 15, contentW = menuW - sideW - 25;
-                String[] names = {"Theme", "HUD Branding", "Hotbar Accent", "Clean UI", "Red Edition"};
-                for (int i = 0; i < names.length; i++) {
-                    int yy = y + 14 + 28 + i * 28;
-                    if (mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= yy && mouseY <= yy + 22) {
-                        if (names[i].equals("Theme") || names[i].equals("Red Edition")) themeIndex = (themeIndex + 1) % THEMES.length;
-                        else setExtra(names[i], !extra(names[i]));
-                        return true;
-                    }
-                }
-            }
-            if (button == 0 && selectedTab == 4) {
-                int contentX = x + sideW + 15, contentW = menuW - sideW - 25;
-                int[] ys = {38, 65, 92, 119, 146};
-                for (int i = 0; i < ys.length; i++) {
-                    int yy = y + 14 + ys[i];
-                    if (mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= yy && mouseY <= yy + 22) {
-                        switch (i) {
-                            case 0 -> visualScale += 0.1f;
-                            case 1 -> { particleAmount += 6; if (particleAmount > 42) particleAmount = 6; }
-                            case 2 -> { effectSpeed += 5; if (effectSpeed > 30) effectSpeed = 5; }
-                            case 3 -> customMainMenu = !customMainMenu;
-                            case 4 -> themeIndex = (themeIndex + 1) % THEMES.length;
-                        }
-                        if (visualScale > 1.5f) visualScale = 0.5f;
-                        return true;
-                    }
-                }
-            }
-            if (button == 0 && selectedTab == 0) {
-                int contentX = x + sideW + 15, contentW = menuW - sideW - 25;
-                if (mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= y + 14 + 119 && mouseY <= y + 14 + 153) {
-                    hudEditorEnabled = true; client.setScreen(new HudEditorScreen()); return true;
-                }
-            }
-
-            if (button == 1) {
+            if (button == 1) { // RMB = enable / disable
                 if (selectedTab == 1) {
-                    int contentX = x + sideW + 15;
-                    int contentW = menuW - sideW - 25;
-                    int listY = y + 14 + 35;
-                    int rowH = 25;
-                    int visibleRows = 6;
-                    int colW = (contentW - 5) / 2;
+                    int contentX = x + sideW + 15, contentW = menuW - sideW - 25;
+                    int listY = y + 14 + 35, rowH = 25, visibleRows = 6, colW = (contentW - 5) / 2;
                     for (int i = 0; i < VISUALS.length; i++) {
-                        int row = i / 2;
-                        int col = i % 2;
-                        int visibleRow = row - visualScroll;
+                        int row = i / 2, col = i % 2, visibleRow = row - visualScroll;
                         if (visibleRow < 0 || visibleRow >= visibleRows) continue;
-                        int rowY = listY + visibleRow * rowH;
-                        int colX = contentX + col * (colW + 5);
-                        if (mouseX >= colX && mouseX <= colX + colW &&
-                                mouseY >= rowY && mouseY <= rowY + 21) {
+                        int rowY = listY + visibleRow * rowH, colX = contentX + col * (colW + 5);
+                        if (mouseX >= colX && mouseX <= colX + colW && mouseY >= rowY && mouseY <= rowY + 21) {
                             toggleVisual(i);
+                            return true;
+                        }
+                    }
+                }
+                if (selectedTab == 2 || selectedTab == 3) {
+                    String[] names = selectedTab == 2
+                            ? new String[]{"FPS Badge","Ping Badge","Clock Badge","Dynamic Island","Status Cards"}
+                            : new String[]{"Theme","HUD Branding","Hotbar Accent","Clean UI","Red Edition"};
+                    int contentX = x + sideW + 15, contentW = menuW - sideW - 25;
+                    for (int i = 0; i < names.length; i++) {
+                        int yy = y + 14 + 28 + i * 28;
+                        if (mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= yy && mouseY <= yy + 22) {
+                            String name = names[i];
+                            if (name.equals("Theme") || name.equals("Red Edition")) {
+                                themeIndex = (themeIndex + 1) % THEMES.length;
+                            } else {
+                                setExtra(name, !extra(name));
+                            }
                             return true;
                         }
                     }
@@ -941,10 +953,8 @@ public class TysmVisualsClient implements ClientModInitializer {
                     return true;
                 }
             }
-
             return super.mouseClicked(mouseX, mouseY, button);
         }
-
         @Override
         public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
             if (selectedTab == 1 && selectedVisual < 0) {
