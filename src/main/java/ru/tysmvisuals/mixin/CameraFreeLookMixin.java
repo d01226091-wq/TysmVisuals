@@ -10,9 +10,17 @@ import ru.tysmvisuals.TysmVisualsClient;
 @Mixin(Camera.class)
 public class CameraFreeLookMixin {
     @Inject(method = "update", at = @At("TAIL"))
-    private void tysmvisuals$freelook(net.minecraft.world.BlockView area, net.minecraft.entity.Entity focusedEntity, boolean thirdPerson, boolean inverseView, float tickDelta, CallbackInfo ci) {
+    private void tysmvisuals$freelook(net.minecraft.world.BlockView area,
+                                      net.minecraft.entity.Entity focusedEntity,
+                                      boolean thirdPerson,
+                                      boolean inverseView,
+                                      float tickDelta,
+                                      CallbackInfo ci) {
         if (TysmVisualsClient.isFreeLookActive()) {
-            ((Camera)(Object)this).setRotation(TysmVisualsClient.getFreeLookYaw(), TysmVisualsClient.getFreeLookPitch());
+            ((CameraAccessor) (Object) this).tysmvisuals$setRotation(
+                    TysmVisualsClient.getFreeLookYaw(),
+                    TysmVisualsClient.getFreeLookPitch()
+            );
         }
     }
 }
