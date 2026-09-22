@@ -893,6 +893,8 @@ public class TysmVisualsClient implements ClientModInitializer {
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
             MinecraftClient client = MinecraftClient.getInstance();
+            int menuW = Math.min(370, width - 28);
+            int menuH = Math.min(218, height - 28);
             int x = (width - menuW) / 2;
             int y = (height - menuH) / 2;
             int sideW = 92;
