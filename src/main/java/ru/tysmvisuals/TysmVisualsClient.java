@@ -417,6 +417,12 @@ public class TysmVisualsClient implements ClientModInitializer {
                 "Главное", "Визуалы", "Утилиты", "Косметика", "Настройки"
         };
 
+        private static final String[] VISUALS = {
+                "Keystrokes", "FPS / Ping", "Coordinates", "Movement HUD",
+                "Target HUD", "Armor HUD", "Item HUD", "Crosshair",
+                "Particles", "Vignette", "Hotbar Glow", "HUD Branding"
+        };
+
         private TysmMenuScreen() {
             super(Text.literal("TysmVisuals"));
         }
@@ -427,7 +433,7 @@ public class TysmVisualsClient implements ClientModInitializer {
         }
 
         private float animation() {
-            float t = (System.currentTimeMillis() - openedAt) / 220f;
+            float t = (System.currentTimeMillis() - openedAt) / 180f;
             t = MathHelper.clamp(t, 0f, 1f);
             return 1f - (float)Math.pow(1f - t, 3);
         }
@@ -443,146 +449,182 @@ public class TysmVisualsClient implements ClientModInitializer {
             float a = animation();
             int red = accent();
 
-            ctx.fill(0, 0, width, height, alpha(0x90000000, a));
+            ctx.fill(0, 0, width, height, alpha(0x78000000, a));
 
-            int menuW = Math.min(430, width - 32);
-            int menuH = Math.min(230, height - 32);
+            // Small Pulse-inspired compact window.
+            int menuW = Math.min(370, width - 28);
+            int menuH = Math.min(218, height - 28);
             int x = (width - menuW) / 2;
             int y = (height - menuH) / 2;
-            int sx = x + (int)((1f - a) * 18f);
-            int sy = y + (int)((1f - a) * 10f);
+            int sx = x + (int)((1f - a) * 12f);
+            int sy = y + (int)((1f - a) * 7f);
 
-            // Main glass panel.
-            ctx.fill(sx + 5, sy + 6, sx + menuW + 5, sy + menuH + 6, alpha(0x65000000, a));
-            ctx.fill(sx, sy, sx + menuW, sy + menuH, alpha(0xEC080A11, a));
-
-            // Sidebar.
-            int sideW = 112;
-            ctx.fill(sx, sy, sx + sideW, sy + menuH, alpha(0xE20B0C14, a));
-            ctx.fill(sx + sideW, sy, sx + sideW + 1, sy + menuH, alpha(0x382A2D38, a));
+            ctx.fill(sx + 4, sy + 5, sx + menuW + 4, sy + menuH + 5, alpha(0x55000000, a));
+            ctx.fill(sx, sy, sx + menuW, sy + menuH, alpha(0xF0080910, a));
             ctx.fill(sx, sy, sx + menuW, sy + 2, alpha(red, a));
 
-            ctx.drawText(textRenderer, Text.literal("TYSM"), sx + 16, sy + 16,
-                    alpha(red, a), true);
-            ctx.drawText(textRenderer, Text.literal("VISUALS"), sx + 16, sy + 29,
-                    alpha(WHITE, a), true);
+            int sideW = 94;
+            ctx.fill(sx, sy, sx + sideW, sy + menuH, alpha(0xE90B0C13, a));
+            ctx.fill(sx + sideW, sy, sx + sideW + 1, sy + menuH, alpha(0x402A2D38, a));
+
+            ctx.drawText(textRenderer, Text.literal("TYSM"), sx + 13, sy + 12, alpha(red, a), true);
+            ctx.drawText(textRenderer, Text.literal("VISUALS"), sx + 13, sy + 25, alpha(WHITE, a), true);
 
             for (int i = 0; i < TABS.length; i++) {
-                int rowY = sy + 55 + i * 29;
+                int rowY = sy + 47 + i * 28;
                 boolean selected = selectedTab == i;
-
                 if (selected) {
-                    ctx.fill(sx + 8, rowY - 4, sx + sideW - 8, rowY + 19,
-                            alpha(0x302A2D38, a));
-                    ctx.fill(sx + 8, rowY - 4, sx + 10, rowY + 19,
-                            alpha(red, a));
+                    ctx.fill(sx + 7, rowY - 3, sx + sideW - 7, rowY + 18, alpha(0x352A2D38, a));
+                    ctx.fill(sx + 7, rowY - 3, sx + 9, rowY + 18, alpha(red, a));
                 }
-
-                ctx.drawText(textRenderer, Text.literal(TABS[i]), sx + 18, rowY + 2,
+                ctx.drawText(textRenderer, Text.literal(TABS[i]), sx + 15, rowY + 2,
                         alpha(selected ? WHITE : MUTED, a), selected);
             }
 
-            int contentX = sx + sideW + 22;
-            int contentW = menuW - sideW - 38;
+            int contentX = sx + sideW + 15;
+            int contentW = menuW - sideW - 25;
 
-            String title = TABS[selectedTab];
-            ctx.drawText(textRenderer, Text.literal(title), contentX, sy + 20,
+            if (selectedTab == 1) {
+                drawVisualPanel(ctx, contentX, sy + 14, contentW, red, a);
+            } else {
+                ctx.drawText(textRenderer, Text.literal(TABS[selectedTab]), contentX, sy + 16,
+                        alpha(WHITE, a), true);
+                ctx.drawText(textRenderer, Text.literal(tabSubtitle(selectedTab)),
+                        contentX, sy + 32, alpha(MUTED, a), false);
+                drawSimpleCard(ctx, contentX, sy + 52, contentW, red, a,
+                        tabCardTitle(selectedTab), tabCardText(selectedTab));
+            }
+
+            ctx.drawText(textRenderer, Text.literal("RSHIFT / ESC"), contentX,
+                    sy + menuH - 17, alpha(MUTED, a), false);
+        }
+
+        private void drawVisualPanel(DrawContext ctx, int x, int y, int w, int red, float a) {
+            ctx.drawText(textRenderer, Text.literal("Визуалы"), x, y + 2, alpha(WHITE, a), true);
+
+            if (selectedVisual < 0) {
+                ctx.drawText(textRenderer, Text.literal("ЛКМ — настройки визуала"),
+                        x, y + 18, alpha(MUTED, a), false);
+
+                int listY = y + 35;
+                for (int i = 0; i < VISUALS.length; i++) {
+                    int rowY = listY + (i % 6) * 26;
+                    int colX = x + (i / 6) * ((w + 5) / 2);
+                    int colW = (w - 5) / 2;
+                    boolean on = visualEnabled(i);
+
+                    ctx.fill(colX, rowY, colX + colW, rowY + 22,
+                            alpha(on ? 0x302A2D38 : 0x181A1F26, a));
+                    if (on) ctx.fill(colX, rowY, colX + 2, rowY + 22, alpha(red, a));
+
+                    ctx.drawText(textRenderer, Text.literal(VISUALS[i]),
+                            colX + 7, rowY + 6, alpha(on ? WHITE : MUTED, a), on);
+                    ctx.drawText(textRenderer, Text.literal(on ? "ON" : "OFF"),
+                            colX + colW - 22, rowY + 6, alpha(on ? red : MUTED, a), false);
+                }
+            } else {
+                String name = VISUALS[selectedVisual];
+                boolean on = visualEnabled(selectedVisual);
+
+                ctx.drawText(textRenderer, Text.literal(name), x, y + 22,
+                        alpha(WHITE, a), true);
+                ctx.drawText(textRenderer, Text.literal(on ? "ВКЛЮЧЕНО" : "ВЫКЛЮЧЕНО"),
+                        x, y + 39, alpha(on ? red : MUTED, a), true);
+
+                ctx.fill(x, y + 60, x + w, y + 96, alpha(0xB5101119, a));
+                ctx.fill(x, y + 60, x + 3, y + 96, alpha(red, a));
+                ctx.drawText(textRenderer, Text.literal("ЛКМ — включить / выключить"),
+                        x + 11, y + 70, alpha(WHITE, a), false);
+                ctx.drawText(textRenderer, Text.literal("ПКМ / ESC — назад"),
+                        x + 11, y + 84, alpha(MUTED, a), false);
+            }
+        }
+
+        private void drawSimpleCard(DrawContext ctx, int x, int y, int w, int red,
+                                    float a, String title, String text) {
+            ctx.fill(x + 3, y + 4, x + w + 3, y + 65, alpha(0x45000000, a));
+            ctx.fill(x, y, x + w, y + 61, alpha(0xB5101119, a));
+            ctx.fill(x, y, x + 3, y + 61, alpha(red, a));
+            ctx.drawText(textRenderer, Text.literal(title), x + 11, y + 12,
                     alpha(WHITE, a), true);
-            ctx.drawText(textRenderer, Text.literal(tabSubtitle(selectedTab)),
-                    contentX, sy + 36, alpha(MUTED, a), false);
-
-            ctx.fill(contentX, sy + 58, contentX + contentW, sy + 59,
-                    alpha(0x402A2D38, a));
-
-            // Clean category preview, without toggles or gameplay features.
-            if (selectedTab == 1) drawVisualsCard(ctx, contentX, sy + 70, contentW, red, a);
-            else drawInfoCard(ctx, contentX, sy + 75, contentW, red, a, tabCardTitle(selectedTab), tabCardText(selectedTab));
-
-            ctx.drawText(textRenderer, Text.literal("RIGHT SHIFT / ESC — CLOSE"),
-                    contentX, sy + menuH - 25, alpha(MUTED, a), false);
+            ctx.drawText(textRenderer, Text.literal(text), x + 11, y + 31,
+                    alpha(MUTED, a), false);
         }
 
         private String tabSubtitle(int tab) {
             return switch (tab) {
-                case 0 -> "Главная панель TysmVisuals";
-                case 1 -> "Визуальные эффекты клиента";
-                case 2 -> "Полезные визуальные инструменты";
-                case 3 -> "Косметические элементы";
-                default -> "Оформление и параметры интерфейса";
+                case 0 -> "Главная панель";
+                case 2 -> "Визуальные инструменты";
+                case 3 -> "Косметическое оформление";
+                default -> "Настройки клиента";
             };
         }
 
         private String tabCardTitle(int tab) {
             return switch (tab) {
-                case 0 -> "Добро пожаловать";
-                case 1 -> "Visual Effects";
+                case 0 -> "TysmVisuals";
                 case 2 -> "Utilities";
                 case 3 -> "Cosmetics";
-                default -> "Client Settings";
+                default -> "Settings";
             };
         }
 
         private String tabCardText(int tab) {
             return switch (tab) {
-                case 0 -> "TysmVisuals • 1.21.4 • Fabric";
-                case 1 -> "Чистые эффекты без изменения игрового процесса";
-                case 2 -> "Компактные элементы для визуального интерфейса";
-                case 3 -> "Стиль, тема и косметическое оформление";
-                default -> "Минималистичный интерфейс и анимация";
+                case 0 -> "1.21.4 • Fabric • Visual Client";
+                case 2 -> "Компактные визуальные элементы";
+                case 3 -> "Тема, эффекты и оформление";
+                default -> "Минималистичный интерфейс";
             };
         }
 
-        private void drawInfoCard(DrawContext ctx, int x, int y, int w, int red,
-                                  float a, String title, String text) {
-            ctx.fill(x + 3, y + 4, x + w + 3, y + 65, alpha(0x45000000, a));
-            ctx.fill(x, y, x + w, y + 61, alpha(0xB5101119, a));
-            ctx.fill(x, y, x + 3, y + 61, alpha(red, a));
-            ctx.drawText(textRenderer, Text.literal(title), x + 13, y + 12,
-                    alpha(WHITE, a), true);
-            ctx.drawText(textRenderer, Text.literal(text), x + 13, y + 31,
-                    alpha(MUTED, a), false);
+        private boolean visualEnabled(int i) {
+            return switch (i) {
+                case 0 -> keystrokesHud;
+                case 1 -> statsHud;
+                case 2 -> coordinatesHud;
+                case 3 -> movementHud;
+                case 4 -> targetHud;
+                case 5 -> armorHud;
+                case 6 -> itemHud;
+                case 7 -> crosshairEnabled;
+                case 8 -> ambientParticles;
+                case 9 -> vignetteEnabled;
+                case 10 -> hotbarGlow;
+                case 11 -> hudEnabled;
+                default -> false;
+            };
         }
 
-        private void drawVisualsCard(DrawContext ctx, int x, int y, int w, int red, float a) {
-            String[] visuals = {"Keystrokes", "FPS / Ping", "Coordinates / Direction", "Target HUD", "Armor / Item HUD", "Crosshair", "Hit Visuals", "Particles", "HUD Editor"};
-            ctx.fill(x + 3, y + 4, x + w + 3, y + 178, alpha(0x45000000, a));
-            ctx.fill(x, y, x + w, y + 174, alpha(0xB5101119, a));
-            ctx.fill(x, y, x + 3, y + 174, alpha(red, a));
-
-            ctx.drawText(textRenderer, Text.literal("Визуалы"), x + 13, y + 10, alpha(WHITE, a), true);
-            ctx.drawText(textRenderer, Text.literal("ЛКМ по визуалу — открыть его настройки"), x + 13, y + 25, alpha(MUTED, a), false);
-
-            for (int i = 0; i < visuals.length; i++) {
-                int rowY = y + 43 + i * 18;
-                boolean selected = selectedVisual == i;
-                ctx.fill(x + 10, rowY - 3, x + w - 10, rowY + 16,
-                        alpha(selected ? 0x382A2D38 : 0x181A1F28, a));
-                if (selected) {
-                    ctx.fill(x + 10, rowY - 3, x + 12, rowY + 15, alpha(red, a));
-                }
-                ctx.drawText(textRenderer, Text.literal(visuals[i]), x + 18, rowY + 1,
-                        alpha(selected ? WHITE : MUTED, a), selected);
-            }
-
-            if (selectedVisual >= 0) {
-                String setting = "Открыть визуальную настройку: " + visuals[selectedVisual];
-                ctx.drawText(textRenderer, Text.literal(setting), x + 13, y + 162,
-                        alpha(red, a), true);
+        private void toggleVisual(int i) {
+            switch (i) {
+                case 0 -> keystrokesHud = !keystrokesHud;
+                case 1 -> statsHud = !statsHud;
+                case 2 -> coordinatesHud = !coordinatesHud;
+                case 3 -> movementHud = !movementHud;
+                case 4 -> targetHud = !targetHud;
+                case 5 -> armorHud = !armorHud;
+                case 6 -> itemHud = !itemHud;
+                case 7 -> crosshairEnabled = !crosshairEnabled;
+                case 8 -> ambientParticles = !ambientParticles;
+                case 9 -> vignetteEnabled = !vignetteEnabled;
+                case 10 -> hotbarGlow = !hotbarGlow;
+                case 11 -> hudEnabled = !hudEnabled;
             }
         }
 
         @Override
         public boolean mouseClicked(double mouseX, double mouseY, int button) {
-            if (button == 0) {
-                int menuW = Math.min(430, width - 32);
-                int menuH = Math.min(230, height - 32);
-                int x = (width - menuW) / 2;
-                int y = (height - menuH) / 2;
-                int sideW = 112;
+            int menuW = Math.min(370, width - 28);
+            int menuH = Math.min(218, height - 28);
+            int x = (width - menuW) / 2;
+            int y = (height - menuH) / 2;
+            int sideW = 94;
 
+            if (button == 0) {
                 if (mouseX >= x && mouseX <= x + sideW &&
-                        mouseY >= y + 51 && mouseY <= y + 55 + TABS.length * 29) {
-                    int index = (int)((mouseY - (y + 51)) / 29);
+                        mouseY >= y + 43 && mouseY <= y + 47 + TABS.length * 28) {
+                    int index = (int)((mouseY - (y + 43)) / 28);
                     if (index >= 0 && index < TABS.length) {
                         selectedTab = index;
                         selectedVisual = -1;
@@ -591,25 +633,43 @@ public class TysmVisualsClient implements ClientModInitializer {
                 }
 
                 if (selectedTab == 1) {
-                    int contentX = x + sideW + 22;
-                    int cardY = y + 70;
-                    int w = menuW - sideW - 38;
-                    for (int i = 0; i < 9; i++) {
-                        int rowY = cardY + 43 + i * 18;
-                        if (mouseX >= contentX + 10 && mouseX <= contentX + w - 10 &&
-                                mouseY >= rowY - 3 && mouseY <= rowY + 15) {
+                    int contentX = x + sideW + 15;
+                    int contentW = menuW - sideW - 25;
+                    int listY = y + 14 + 35;
+
+                    if (selectedVisual >= 0) {
+                        toggleVisual(selectedVisual);
+                        return true;
+                    }
+
+                    for (int i = 0; i < VISUALS.length; i++) {
+                        int rowY = listY + (i % 6) * 26;
+                        int colX = contentX + (i / 6) * ((contentW + 5) / 2);
+                        int colW = (contentW - 5) / 2;
+                        if (mouseX >= colX && mouseX <= colX + colW &&
+                                mouseY >= rowY && mouseY <= rowY + 22) {
                             selectedVisual = i;
                             return true;
                         }
                     }
                 }
             }
+
+            if (button == 1 && selectedVisual >= 0) {
+                selectedVisual = -1;
+                return true;
+            }
+
             return super.mouseClicked(mouseX, mouseY, button);
         }
 
         @Override
         public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
             if (keyCode == GLFW.GLFW_KEY_ESCAPE || keyCode == GLFW.GLFW_KEY_RIGHT_SHIFT) {
+                if (selectedVisual >= 0) {
+                    selectedVisual = -1;
+                    return true;
+                }
                 close();
                 return true;
             }
