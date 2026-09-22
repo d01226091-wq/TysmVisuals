@@ -14,6 +14,13 @@ import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.EquipmentSlot;
 import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.entity.mob.CreeperEntity;
+import net.minecraft.entity.mob.SkeletonEntity;
+import net.minecraft.entity.mob.WitherSkeletonEntity;
+import net.minecraft.entity.mob.ZombieEntity;
+import net.minecraft.item.ItemStack;
+import net.minecraft.item.Items;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 import org.lwjgl.glfw.GLFW;
@@ -257,10 +264,8 @@ public class TysmVisualsClient implements ClientModInitializer {
             int[] p = hudPos("Target HUD", w - 188, 48);
             double distance = client.player.distanceTo(living);
             String name = living.getDisplayName().getString();
-            if (name.length() > 18) name = name.substring(0, 18);
-            drawInfoBox(ctx, client, p[0], p[1], 180, 48, red,
-                    name + "  " + String.format("%.1fm", distance),
-                    String.format("HP %.1f / %.1f", living.getHealth(), living.getMaxHealth()));
+            if (name.length() > 16) name = name.substring(0, 16);
+            drawTargetHud(ctx, client, p[0], p[1], red, living, name, distance);
         }
 
         if (armorHud) {
@@ -305,6 +310,37 @@ public class TysmVisualsClient implements ClientModInitializer {
             ctx.drawCenteredTextWithShadow(client.textRenderer, Text.literal(keys[i]), bx + 10, y + 26,
                     binds[i].isPressed() ? WHITE : MUTED);
         }
+    }
+
+    private static void drawTargetHud(DrawContext ctx, MinecraftClient client, int x, int y, int red,
+                                      LivingEntity target, String name, double distance) {
+        int width = 180;
+        int height = 52;
+        ctx.fill(x + 3, y + 3, x + width + 3, y + height + 3, 0x40000000);
+        ctx.fill(x, y, x + width, y + height, 0xB50A0B10);
+        ctx.fill(x, y, x + 3, y + height, red);
+
+        ItemStack icon = targetIcon(target);
+        if (!icon.isEmpty()) {
+            ctx.drawItem(icon, x + 7, y + 7);
+        } else {
+            ctx.fill(x + 8, y + 8, x + 24, y + 24, 0x4033333D);
+            ctx.drawCenteredTextWithShadow(client.textRenderer, Text.literal("?"), x + 16, y + 12, MUTED);
+        }
+
+        ctx.drawText(client.textRenderer, Text.literal(name), x + 30, y + 7, WHITE, true);
+        ctx.drawText(client.textRenderer, Text.literal(String.format("%.1fm", distance)), x + 30, y + 21, MUTED, false);
+        ctx.drawText(client.textRenderer, Text.literal(String.format("HP %.1f / %.1f", target.getHealth(), target.getMaxHealth())),
+                x + 30, y + 35, MUTED, false);
+    }
+
+    private static ItemStack targetIcon(LivingEntity target) {
+        if (target instanceof PlayerEntity) return new ItemStack(Items.PLAYER_HEAD);
+        if (target instanceof WitherSkeletonEntity) return new ItemStack(Items.WITHER_SKELETON_SKULL);
+        if (target instanceof SkeletonEntity) return new ItemStack(Items.SKELETON_SKULL);
+        if (target instanceof ZombieEntity) return new ItemStack(Items.ZOMBIE_HEAD);
+        if (target instanceof CreeperEntity) return new ItemStack(Items.CREEPER_HEAD);
+        return ItemStack.EMPTY;
     }
 
     private static void drawInfoBox(DrawContext ctx, MinecraftClient client, int x, int y, int w, int h,
