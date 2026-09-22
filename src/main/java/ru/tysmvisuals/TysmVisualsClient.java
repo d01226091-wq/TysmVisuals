@@ -45,6 +45,10 @@ public class TysmVisualsClient implements ClientModInitializer {
     private static boolean itemHud = false;
     private static boolean skyColorEnabled = false;
     private static int skyColorIndex = 0;
+    private static float visualScale = 1.0f;
+    private static int particleAmount = 18;
+    private static int effectSpeed = 10;
+    private static boolean customMainMenu = true;
     private static final int[] SKY_COLORS = {0xFF4D7CFF,0xFFB52BFF,0xFFFF4D6D,0xFFFF8A3D,0xFF35D6A5,0xFF20C8FF,0xFF6D5CFF,0xFFE8E8F2};
     private static final String[] SKY_COLOR_NAMES = {"BLUE","PURPLE","CRIMSON","SUNSET","MINT","CYAN","VIOLET","LIGHT"};
 
@@ -90,7 +94,7 @@ public class TysmVisualsClient implements ClientModInitializer {
             }
 
             // Replace the vanilla title screen with the TysmVisuals main screen.
-            if (client.currentScreen instanceof net.minecraft.client.gui.screen.TitleScreen
+            if (customMainMenu && client.currentScreen instanceof net.minecraft.client.gui.screen.TitleScreen
                     && !(client.currentScreen instanceof TysmMainMenuScreen)) {
                 client.setScreen(new TysmMainMenuScreen());
             }
@@ -444,8 +448,8 @@ public class TysmVisualsClient implements ClientModInitializer {
     }
 
     private static void drawAmbientParticles(DrawContext ctx, int w, int h, int red, int age) {
-        for (int i = 0; i < 18; i++) {
-            float phase = age * 0.018f + i * 1.73f;
+        for (int i = 0; i < particleAmount; i++) {
+            float phase = age * (0.010f + effectSpeed * 0.001f) + i * 1.73f;
             int x = (int)(w * (0.5f + 0.46f * MathHelper.sin(phase * 0.71f + i)));
             int y = (int)(h * (0.5f + 0.43f * MathHelper.cos(phase * 0.53f + i * 0.37f)));
             int size = 1 + (i % 2);
@@ -545,6 +549,10 @@ public class TysmVisualsClient implements ClientModInitializer {
 
             if (selectedTab == 1) {
                 drawVisualPanel(ctx, contentX, sy + 14, contentW, red, a);
+            } else if (selectedTab == 4) {
+                drawSettingsPanel(ctx, contentX, sy + 14, contentW, red, a);
+            } else if (selectedTab == 2 || selectedTab == 3) {
+                drawCategoryPanel(ctx, contentX, sy + 14, contentW, red, a);
             } else {
                 ctx.drawText(textRenderer, Text.literal(TABS[selectedTab]), contentX, sy + 16,
                         alpha(WHITE, a), true);
@@ -619,6 +627,43 @@ public class TysmVisualsClient implements ClientModInitializer {
             }
         }
 
+        private void drawSettingsPanel(DrawContext ctx, int x, int y, int w, int red, float a) {
+            ctx.drawText(textRenderer, Text.literal("Настройки"), x, y + 2, alpha(WHITE, a), true);
+            ctx.drawText(textRenderer, Text.literal("ЛКМ — изменить • ПКМ — включить/выключить"),
+                    x, y + 18, alpha(MUTED, a), false);
+
+            drawSettingRow(ctx, x, y + 38, w, red, a, "UI SCALE", String.format("%.1fx", visualScale));
+            drawSettingRow(ctx, x, y + 65, w, red, a, "PARTICLES", String.valueOf(particleAmount));
+            drawSettingRow(ctx, x, y + 92, w, red, a, "EFFECT SPEED", String.valueOf(effectSpeed));
+            drawSettingRow(ctx, x, y + 119, w, red, a, "MAIN MENU", customMainMenu ? "ON" : "OFF");
+            drawSettingRow(ctx, x, y + 146, w, red, a, "THEME", THEME_NAMES[themeIndex]);
+        }
+
+        private void drawSettingRow(DrawContext ctx, int x, int y, int w, int red, float a,
+                                    String name, String value) {
+            ctx.fill(x, y, x + w, y + 22, alpha(0x221D2028, a));
+            ctx.fill(x, y, x + 2, y + 22, alpha(red, a));
+            ctx.drawText(textRenderer, Text.literal(name), x + 8, y + 6, alpha(MUTED, a), false);
+            ctx.drawText(textRenderer, Text.literal(value), x + w - 60, y + 6, alpha(WHITE, a), true);
+        }
+
+        private void drawCategoryPanel(DrawContext ctx, int x, int y, int w, int red, float a) {
+            String[] names = selectedTab == 2
+                    ? new String[]{"FPS Badge", "Ping Badge", "Clock Badge", "Dynamic Island", "Status Cards"}
+                    : new String[]{"Theme", "HUD Branding", "Hotbar Accent", "Clean UI", "Red Edition"};
+            ctx.drawText(textRenderer, Text.literal(TABS[selectedTab]), x, y + 2, alpha(WHITE, a), true);
+            for (int i = 0; i < names.length; i++) {
+                int yy = y + 28 + i * 28;
+                boolean on = extra(names[i]);
+                ctx.fill(x, yy, x + w, yy + 22, alpha(on ? 0x302A2D38 : 0x181A1F26, a));
+                if (on) ctx.fill(x, yy, x + 2, yy + 22, alpha(red, a));
+                ctx.drawText(textRenderer, Text.literal(names[i]), x + 8, yy + 6,
+                        alpha(on ? WHITE : MUTED, a), on);
+                ctx.drawText(textRenderer, Text.literal(on ? "ON" : "OFF"), x + w - 25, yy + 6,
+                        alpha(on ? red : MUTED, a), false);
+            }
+        }
+
         private void drawSimpleCard(DrawContext ctx, int x, int y, int w, int red,
                                     float a, String title, String text) {
             ctx.fill(x + 3, y + 4, x + w + 3, y + 65, alpha(0x45000000, a));
@@ -655,6 +700,20 @@ public class TysmVisualsClient implements ClientModInitializer {
                 case 3 -> "Тема, эффекты и оформление";
                 default -> "Минималистичный интерфейс";
             };
+        }
+
+        private void cycleVisualSetting(int i) {
+            if (i == 8) {
+                particleAmount += 6;
+                if (particleAmount > 42) particleAmount = 6;
+            } else if (i == 14) {
+                effectSpeed += 5;
+                if (effectSpeed > 30) effectSpeed = 5;
+            } else if (i == 22) {
+                skyColorEnabled = !skyColorEnabled;
+            } else {
+                toggleVisual(i);
+            }
         }
 
         private boolean visualEnabled(int i) {
@@ -701,6 +760,7 @@ public class TysmVisualsClient implements ClientModInitializer {
             int y = (height - menuH) / 2;
             int sideW = 94;
 
+            // RMB = instantly toggle. LMB = open the settings/details.
             if (button == 0) {
                 if (mouseX >= x && mouseX <= x + sideW &&
                         mouseY >= y + 43 && mouseY <= y + 47 + TABS.length * 28) {
@@ -716,12 +776,11 @@ public class TysmVisualsClient implements ClientModInitializer {
                     int contentX = x + sideW + 15;
                     int contentW = menuW - sideW - 25;
                     int listY = y + 14 + 35;
-
                     if (selectedVisual >= 0) {
-                        toggleVisual(selectedVisual);
+                        // LMB cycles the selected visual's configuration.
+                        cycleVisualSetting(selectedVisual);
                         return true;
                     }
-
                     int rowH = 25;
                     int visibleRows = 6;
                     int colW = (contentW - 5) / 2;
@@ -741,9 +800,32 @@ public class TysmVisualsClient implements ClientModInitializer {
                 }
             }
 
-            if (button == 1 && selectedVisual >= 0) {
-                selectedVisual = -1;
-                return true;
+            if (button == 1) {
+                if (selectedTab == 1) {
+                    int contentX = x + sideW + 15;
+                    int contentW = menuW - sideW - 25;
+                    int listY = y + 14 + 35;
+                    int rowH = 25;
+                    int visibleRows = 6;
+                    int colW = (contentW - 5) / 2;
+                    for (int i = 0; i < VISUALS.length; i++) {
+                        int row = i / 2;
+                        int col = i % 2;
+                        int visibleRow = row - visualScroll;
+                        if (visibleRow < 0 || visibleRow >= visibleRows) continue;
+                        int rowY = listY + visibleRow * rowH;
+                        int colX = contentX + col * (colW + 5);
+                        if (mouseX >= colX && mouseX <= colX + colW &&
+                                mouseY >= rowY && mouseY <= rowY + 21) {
+                            toggleVisual(i);
+                            return true;
+                        }
+                    }
+                }
+                if (selectedVisual >= 0) {
+                    selectedVisual = -1;
+                    return true;
+                }
             }
 
             return super.mouseClicked(mouseX, mouseY, button);
