@@ -21,6 +21,7 @@ import net.minecraft.entity.mob.WitherSkeletonEntity;
 import net.minecraft.entity.mob.ZombieEntity;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.sound.SoundEvents;
 import net.minecraft.text.Text;
 import net.minecraft.util.math.MathHelper;
 import org.lwjgl.glfw.GLFW;
@@ -31,9 +32,19 @@ import org.lwjgl.glfw.GLFW;
  */
 public class TysmVisualsClient implements ClientModInitializer {
     private static KeyBinding menuKey;
+    private static KeyBinding zoomKey;
+    private static KeyBinding freeLookKey;
     private static float pulse;
     private static int themeIndex = 0;
     private static long visualTime;
+    private static boolean zoomActive;
+    private static boolean freeLookActive;
+    private static float freeLookYaw;
+    private static float freeLookPitch;
+    private static double lastMouseX;
+    private static double lastMouseY;
+    private static LivingEntity lastSoundTarget;
+    private static float lastSoundHealth = -1f;
 
     private static boolean hudEnabled = false;
     private static boolean crosshairEnabled = false;
@@ -99,6 +110,9 @@ public class TysmVisualsClient implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        zoomKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.tysmvisuals.zoom", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_Z, "category.tysmvisuals"));
+        freeLookKey = KeyBindingHelper.registerKeyBinding(new KeyBinding("key.tysmvisuals.freelook", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_F, "category.tysmvisuals"));
+
         menuKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.tysmvisuals.menu",
                 InputUtil.Type.KEYSYM,
@@ -108,6 +122,21 @@ public class TysmVisualsClient implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             pulse += 0.055f;
             visualTime++;
+            zoomActive = zoomKey.isPressed();
+            if (freeLookKey.isPressed() && client.currentScreen == null && client.player != null) {
+                if (!freeLookActive) { freeLookActive = true; freeLookYaw = client.player.getYaw(); freeLookPitch = client.player.getPitch(); lastMouseX = client.mouse.getX(); lastMouseY = client.mouse.getY(); }
+                double dx = client.mouse.getX() - lastMouseX; double dy = client.mouse.getY() - lastMouseY;
+                lastMouseX = client.mouse.getX(); lastMouseY = client.mouse.getY();
+                freeLookYaw += (float)dx * 0.15f; freeLookPitch = MathHelper.clamp(freeLookPitch + (float)dy * 0.15f, -90f, 90f);
+            } else freeLookActive = false;
+            if (client.player != null && client.targetedEntity instanceof LivingEntity target && target != client.player) {
+                float health = target.getHealth();
+                if (lastSoundTarget == target && lastSoundHealth >= 0 && health < lastSoundHealth) {
+                    client.player.playSound(SoundEvents.ENTITY_PLAYER_ATTACK_STRONG, 0.7f, 1.05f);
+                    if (extra("Meme Hit Sounds") && client.world != null && client.world.random.nextInt(4) == 0) client.player.playSound(SoundEvents.ENTITY_GOAT_SCREAMING_HURT, 0.45f, 1.0f);
+                }
+                lastSoundTarget = target; lastSoundHealth = health;
+            } else { lastSoundTarget = null; lastSoundHealth = -1f; }
 
             // Open the cosmetic menu with Right Shift when no other screen is open.
             if (menuKey.wasPressed() && client.currentScreen == null) {
@@ -168,8 +197,9 @@ public class TysmVisualsClient implements ClientModInitializer {
         }
 
         if (ambientParticles || extra("Ambient Dots") || extra("Sparkles") || extra("Glow Motes")
-                || extra("Trail Dots") || extra("Particle Fade")) {
+                || extra("Trail Dots") || extra("Particle Fade") || extra("Star Particles")) {
             drawAmbientParticles(ctx, w, h, red, client.player.age);
+            if (extra("Star Particles")) drawStarParticles(ctx, w, h, red);
         }
 
         if (hudEnabled) {
@@ -220,6 +250,22 @@ public class TysmVisualsClient implements ClientModInitializer {
         }
         if (extra("Hotbar Accent")) {
             drawHotbarAccent(ctx, w, h, red);
+        }
+    }
+
+    public static boolean isFreeLookActive() { return freeLookActive; }
+    public static float getFreeLookYaw() { return freeLookYaw; }
+    public static float getFreeLookPitch() { return freeLookPitch; }
+    public static boolean isZoomActive() { return zoomActive; }
+
+    private static void drawStarParticles(DrawContext ctx, int w, int h, int red) {
+        int count = Math.max(10, particleAmount / 2);
+        for (int i = 0; i < count; i++) {
+            float t = visualTime * 0.018f * (1f + (i % 3) * 0.25f) + i * 1.73f;
+            int x = (int)((MathHelper.sin(t * 1.37f) * 0.45f + 0.5f) * w);
+            int y = (int)((MathHelper.cos(t * 1.11f) * 0.42f + 0.5f) * h);
+            int s = 1 + (i % 2); int color = (0x70 << 24) | (red & 0xFFFFFF);
+            ctx.fill(x - s, y, x + s + 1, y + 1, color); ctx.fill(x, y - s, x + 1, y + s + 1, color);
         }
     }
 
