@@ -49,6 +49,19 @@ public class TysmVisualsClient implements ClientModInitializer {
     private static int particleAmount = 18;
     private static int effectSpeed = 10;
     private static boolean customMainMenu = true;
+    private static boolean hudEditorEnabled = false;
+    private static String draggedHud = null;
+    private static int dragOffsetX;
+    private static int dragOffsetY;
+    private static final Map<String, int[]> HUD_POSITIONS = new HashMap<>();
+
+    private static int[] hudPos(String id, int defaultX, int defaultY) {
+        return HUD_POSITIONS.computeIfAbsent(id, k -> new int[]{defaultX, defaultY});
+    }
+
+    public static void resetHudPositions() {
+        HUD_POSITIONS.clear();
+    }
     private static final int[] SKY_COLORS = {0xFF4D7CFF,0xFFB52BFF,0xFFFF4D6D,0xFFFF8A3D,0xFF35D6A5,0xFF20C8FF,0xFF6D5CFF,0xFFE8E8F2};
     private static final String[] SKY_COLOR_NAMES = {"BLUE","PURPLE","CRIMSON","SUNSET","MINT","CYAN","VIOLET","LIGHT"};
 
@@ -91,6 +104,14 @@ public class TysmVisualsClient implements ClientModInitializer {
             // Open the cosmetic menu with Right Shift when no other screen is open.
             if (menuKey.wasPressed() && client.currentScreen == null) {
                 client.setScreen(new TysmMenuScreen());
+            }
+
+            if (client.currentScreen instanceof net.minecraft.client.gui.screen.world.SelectWorldScreen && !(client.currentScreen instanceof TysmSelectWorldScreen)) {
+                client.setScreen(new TysmSelectWorldScreen(client.currentScreen));
+            } else if (client.currentScreen instanceof net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen && !(client.currentScreen instanceof TysmMultiplayerScreen)) {
+                client.setScreen(new TysmMultiplayerScreen(client.currentScreen));
+            } else if (client.currentScreen instanceof net.minecraft.client.gui.screen.option.OptionsScreen && !(client.currentScreen instanceof TysmOptionsScreen)) {
+                client.setScreen(new TysmOptionsScreen(client.currentScreen, client.options));
             }
 
             // Replace the vanilla title screen with the TysmVisuals main screen.
@@ -197,80 +218,72 @@ public class TysmVisualsClient implements ClientModInitializer {
     private static void drawPvPHud(DrawContext ctx, MinecraftClient client, int w, int h, int red) {
         if (client.player == null) return;
 
-        int x = 8;
-        int y = 48;
-
         if (keystrokesHud) {
-            drawKeyBox(ctx, client, x, y, red);
-            y += 54;
+            int[] p = hudPos("Keystrokes", 8, 48);
+            drawKeyBox(ctx, client, p[0], p[1], red);
         }
 
         if (statsHud) {
+            int[] p = hudPos("FPS / Ping", 8, 102);
             int fps = client.getCurrentFps();
             String ping = "--";
             if (client.getNetworkHandler() != null) {
                 var entry = client.getNetworkHandler().getPlayerListEntry(client.player.getUuid());
                 if (entry != null) ping = String.valueOf(entry.getLatency());
             }
-            drawInfoBox(ctx, client, x, y, 112, 38, red,
+            drawInfoBox(ctx, client, p[0], p[1], 112, 38, red,
                     "FPS " + fps + "   PING " + ping,
                     client.player.getHealth() + "/" + client.player.getMaxHealth() + " HP");
-            y += 44;
         }
 
         if (coordinatesHud) {
-            String coords = String.format("XYZ %.0f %.0f %.0f",
-                    client.player.getX(), client.player.getY(), client.player.getZ());
-            String direction = directionName(client.player.getYaw());
-            drawInfoBox(ctx, client, x, y, 150, 38, red, coords, "DIR " + direction);
-            y += 44;
+            int[] p = hudPos("Coordinates", 8, 146);
+            String coords = String.format("XYZ %.0f %.0f %.0f", client.player.getX(), client.player.getY(), client.player.getZ());
+            drawInfoBox(ctx, client, p[0], p[1], 150, 38, red, coords, "DIR " + directionName(client.player.getYaw()));
         }
 
         if (movementHud) {
-            double speed = Math.sqrt(
-                    client.player.getVelocity().x * client.player.getVelocity().x +
+            int[] p = hudPos("Movement HUD", 8, 190);
+            double speed = Math.sqrt(client.player.getVelocity().x * client.player.getVelocity().x +
                     client.player.getVelocity().z * client.player.getVelocity().z) * 20.0;
             String state = client.player.isSprinting() ? "SPRINT" :
-                    (client.player.isSneaking() ? "SNEAK" :
-                    (client.player.isOnGround() ? "GROUND" : "AIR"));
-            drawInfoBox(ctx, client, x, y, 150, 38, red,
+                    (client.player.isSneaking() ? "SNEAK" : (client.player.isOnGround() ? "GROUND" : "AIR"));
+            drawInfoBox(ctx, client, p[0], p[1], 150, 38, red,
                     String.format("SPEED %.2f m/s", speed), state);
-            y += 44;
         }
 
-        if (targetHud && client.crosshairTarget != null &&
-                client.targetedEntity instanceof LivingEntity living && living != client.player) {
+        if (targetHud && client.crosshairTarget != null && client.targetedEntity instanceof LivingEntity living && living != client.player) {
+            int[] p = hudPos("Target HUD", w - 188, 48);
             double distance = client.player.distanceTo(living);
             String name = living.getDisplayName().getString();
             if (name.length() > 18) name = name.substring(0, 18);
-            drawInfoBox(ctx, client, x, y, 180, 48, red,
+            drawInfoBox(ctx, client, p[0], p[1], 180, 48, red,
                     name + "  " + String.format("%.1fm", distance),
                     String.format("HP %.1f / %.1f", living.getHealth(), living.getMaxHealth()));
-            y += 54;
         }
 
         if (armorHud) {
-            int armorX = w - 120;
-            int armorY = 48;
+            int[] p = hudPos("Armor HUD", w - 120, 48);
+            int armorX = p[0], armorY = p[1];
             ctx.fill(armorX, armorY, armorX + 112, armorY + 82, 0xB50A0B10);
             ctx.fill(armorX, armorY, armorX + 3, armorY + 82, red);
             ctx.drawText(client.textRenderer, Text.literal("ARMOR"), armorX + 10, armorY + 7, red, true);
             EquipmentSlot[] slots = {EquipmentSlot.HEAD, EquipmentSlot.CHEST, EquipmentSlot.LEGS, EquipmentSlot.FEET};
             for (int i = 0; i < slots.length; i++) {
                 var stack = client.player.getEquippedStack(slots[i]);
-                String value = stack.isEmpty() ? "--" :
-                        (stack.isDamageable() ? String.valueOf(stack.getMaxDamage() - stack.getDamage()) : "∞");
+                String value = stack.isEmpty() ? "--" : (stack.isDamageable() ?
+                        String.valueOf(stack.getMaxDamage() - stack.getDamage()) : "∞");
                 ctx.drawText(client.textRenderer, Text.literal(value), armorX + 10, armorY + 22 + i * 13, MUTED, false);
             }
         }
 
         if (itemHud) {
+            int[] p = hudPos("Item HUD", w - 120, h - 92);
             var stack = client.player.getMainHandStack();
             String item = stack.isEmpty() ? "EMPTY HAND" : stack.getName().getString();
             if (item.length() > 17) item = item.substring(0, 17);
-            String durability = stack.isDamageable()
-                    ? String.valueOf(stack.getMaxDamage() - stack.getDamage()) : "∞";
-            drawInfoBox(ctx, client, w - 120, h - 92, 112, 48, red, item, "DUR " + durability);
+            String durability = stack.isDamageable() ? String.valueOf(stack.getMaxDamage() - stack.getDamage()) : "∞";
+            drawInfoBox(ctx, client, p[0], p[1], 112, 48, red, item, "DUR " + durability);
         }
     }
 
@@ -560,10 +573,64 @@ public class TysmVisualsClient implements ClientModInitializer {
                         contentX, sy + 32, alpha(MUTED, a), false);
                 drawSimpleCard(ctx, contentX, sy + 52, contentW, red, a,
                         tabCardTitle(selectedTab), tabCardText(selectedTab));
+                if (selectedTab == 0) {
+                    ctx.fill(contentX, sy + 119, contentX + contentW, sy + 153, alpha(0x302A2D38, a));
+                    ctx.drawText(textRenderer, Text.literal("HUD EDITOR"), contentX + 10, sy + 128, alpha(WHITE, a), true);
+                    ctx.drawText(textRenderer, Text.literal("ЛКМ — двигать экранные элементы"), contentX + 10, sy + 141, alpha(MUTED, a), false);
+                }
             }
 
             ctx.drawText(textRenderer, Text.literal("RSHIFT / ESC"), contentX,
                     sy + menuH - 17, alpha(MUTED, a), false);
+
+            String tip = hoveredElement(mouseX, mouseY, x, y, menuW, sideW);
+            if (tip != null) {
+                int tw = textRenderer.getWidth(tip) + 18;
+                int tx = MathHelper.clamp(mouseX - tw / 2, 6, width - tw - 6);
+                ctx.fill(tx, 5, tx + tw, 24, 0xE90A0B10);
+                ctx.fill(tx, 5, tx + 2, 24, red);
+                ctx.drawCenteredTextWithShadow(textRenderer, Text.literal(tip), tx + tw / 2, 10, WHITE);
+            }
+        }
+
+        private String hoveredElement(int mouseX, int mouseY, int x, int y, int menuW, int sideW) {
+            if (mouseX >= x && mouseX <= x + sideW && mouseY >= y + 43 && mouseY <= y + 43 + TABS.length * 28) {
+                int i = (int)((mouseY - (y + 43)) / 28);
+                if (i >= 0 && i < TABS.length) return switch (i) {
+                    case 0 -> "Главная — основная панель клиента";
+                    case 1 -> "Визуалы — экранные эффекты и HUD";
+                    case 2 -> "Утилиты — полезные визуальные элементы";
+                    case 3 -> "Косметика — тема и оформление";
+                    default -> "Настройки — параметры TysmVisuals";
+                };
+            }
+            int contentX = x + sideW + 15, contentW = menuW - sideW - 25;
+            if (selectedTab == 1 && selectedVisual < 0) {
+                int listY = y + 14 + 35, rowH = 25, colW = (contentW - 5) / 2;
+                for (int i = 0; i < VISUALS.length; i++) {
+                    int row = i / 2, col = i % 2, vr = row - visualScroll;
+                    if (vr < 0 || vr >= 6) continue;
+                    int yy = listY + vr * rowH, xx = contentX + col * (colW + 5);
+                    if (mouseX >= xx && mouseX <= xx + colW && mouseY >= yy && mouseY <= yy + 21) return VISUALS[i];
+                }
+            }
+            if (selectedTab == 2 || selectedTab == 3) {
+                String[] names = selectedTab == 2 ? new String[]{"FPS Badge","Ping Badge","Clock Badge","Dynamic Island","Status Cards"} : new String[]{"Theme","HUD Branding","Hotbar Accent","Clean UI","Red Edition"};
+                for (int i = 0; i < names.length; i++) {
+                    int yy = y + 14 + 28 + i * 28;
+                    if (mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= yy && mouseY <= yy + 22) return names[i];
+                }
+            }
+            if (selectedTab == 4) {
+                String[] names = {"UI SCALE","PARTICLES","EFFECT SPEED","MAIN MENU","THEME"};
+                int[] ys = {38,65,92,119,146};
+                for (int i = 0; i < ys.length; i++) {
+                    int yy = y + 14 + ys[i];
+                    if (mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= yy && mouseY <= yy + 22) return names[i];
+                }
+            }
+            if (selectedTab == 0 && mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= y + 14 + 119 && mouseY <= y + 14 + 153) return "HUD Editor — перетаскивание элементов мышью";
+            return null;
         }
 
         private void drawVisualPanel(DrawContext ctx, int x, int y, int w, int red, float a) {
@@ -800,6 +867,53 @@ public class TysmVisualsClient implements ClientModInitializer {
                 }
             }
 
+            if (button == 0 && selectedTab == 2) {
+                int contentX = x + sideW + 15, contentW = menuW - sideW - 25;
+                String[] names = {"FPS Badge", "Ping Badge", "Clock Badge", "Dynamic Island", "Status Cards"};
+                for (int i = 0; i < names.length; i++) {
+                    int yy = y + 14 + 28 + i * 28;
+                    if (mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= yy && mouseY <= yy + 22) {
+                        setExtra(names[i], !extra(names[i])); return true;
+                    }
+                }
+            }
+            if (button == 0 && selectedTab == 3) {
+                int contentX = x + sideW + 15, contentW = menuW - sideW - 25;
+                String[] names = {"Theme", "HUD Branding", "Hotbar Accent", "Clean UI", "Red Edition"};
+                for (int i = 0; i < names.length; i++) {
+                    int yy = y + 14 + 28 + i * 28;
+                    if (mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= yy && mouseY <= yy + 22) {
+                        if (names[i].equals("Theme") || names[i].equals("Red Edition")) themeIndex = (themeIndex + 1) % THEMES.length;
+                        else setExtra(names[i], !extra(names[i]));
+                        return true;
+                    }
+                }
+            }
+            if (button == 0 && selectedTab == 4) {
+                int contentX = x + sideW + 15, contentW = menuW - sideW - 25;
+                int[] ys = {38, 65, 92, 119, 146};
+                for (int i = 0; i < ys.length; i++) {
+                    int yy = y + 14 + ys[i];
+                    if (mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= yy && mouseY <= yy + 22) {
+                        switch (i) {
+                            case 0 -> visualScale += 0.1f;
+                            case 1 -> { particleAmount += 6; if (particleAmount > 42) particleAmount = 6; }
+                            case 2 -> { effectSpeed += 5; if (effectSpeed > 30) effectSpeed = 5; }
+                            case 3 -> customMainMenu = !customMainMenu;
+                            case 4 -> themeIndex = (themeIndex + 1) % THEMES.length;
+                        }
+                        if (visualScale > 1.5f) visualScale = 0.5f;
+                        return true;
+                    }
+                }
+            }
+            if (button == 0 && selectedTab == 0) {
+                int contentX = x + sideW + 15, contentW = menuW - sideW - 25;
+                if (mouseX >= contentX && mouseX <= contentX + contentW && mouseY >= y + 14 + 119 && mouseY <= y + 14 + 153) {
+                    hudEditorEnabled = true; client.setScreen(new HudEditorScreen()); return true;
+                }
+            }
+
             if (button == 1) {
                 if (selectedTab == 1) {
                     int contentX = x + sideW + 15;
@@ -852,6 +966,125 @@ public class TysmVisualsClient implements ClientModInitializer {
                 close();
                 return true;
             }
+            return super.keyPressed(keyCode, scanCode, modifiers);
+        }
+    }
+
+    private static abstract class TysmChromeScreen extends Screen {
+        protected TysmChromeScreen(Text title) { super(title); }
+        protected void drawChrome(DrawContext ctx) {
+            int red = accent();
+            ctx.fill(0, 0, width, 26, 0xD9080A0F);
+            ctx.fill(0, 25, width, 27, red);
+            ctx.drawText(textRenderer, Text.literal("TYSMVISUALS"), 10, 8, red, true);
+            ctx.drawText(textRenderer, Text.literal("RSHIFT — меню"), width - 92, 8, MUTED, false);
+        }
+        @Override public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+            if (keyCode == GLFW.GLFW_KEY_RIGHT_SHIFT) { MinecraftClient.getInstance().setScreen(new TysmMenuScreen()); return true; }
+            return super.keyPressed(keyCode, scanCode, modifiers);
+        }
+    }
+
+    private static class TysmSelectWorldScreen extends net.minecraft.client.gui.screen.world.SelectWorldScreen {
+        TysmSelectWorldScreen(Screen parent) { super(parent); }
+        @Override public void render(DrawContext ctx, int mouseX, int mouseY, float delta) { super.render(ctx, mouseX, mouseY, delta); drawChrome(ctx); }
+        private void drawChrome(DrawContext ctx) { ctx.fill(0,0,width,26,0xD9080A0F); ctx.fill(0,25,width,27,accent()); ctx.drawText(textRenderer,Text.literal("TYSMVISUALS  •  СОЗДАНИЕ МИРА"),10,8,accent(),true); }
+        @Override public boolean keyPressed(int k,int s,int m){ if(k==GLFW.GLFW_KEY_RIGHT_SHIFT){MinecraftClient.getInstance().setScreen(new TysmMenuScreen());return true;} return super.keyPressed(k,s,m); }
+    }
+    private static class TysmMultiplayerScreen extends net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen {
+        TysmMultiplayerScreen(Screen parent) { super(parent); }
+        @Override public void render(DrawContext ctx,int mx,int my,float d){ super.render(ctx,mx,my,d); drawChrome(ctx); }
+        private void drawChrome(DrawContext ctx){ctx.fill(0,0,width,26,0xD9080A0F);ctx.fill(0,25,width,27,accent());ctx.drawText(textRenderer,Text.literal("TYSMVISUALS  •  СЕТЕВАЯ ИГРА"),10,8,accent(),true);}
+        @Override public boolean keyPressed(int k,int s,int m){if(k==GLFW.GLFW_KEY_RIGHT_SHIFT){MinecraftClient.getInstance().setScreen(new TysmMenuScreen());return true;}return super.keyPressed(k,s,m);}
+    }
+    private static class TysmOptionsScreen extends net.minecraft.client.gui.screen.option.OptionsScreen {
+        TysmOptionsScreen(Screen parent, net.minecraft.client.option.GameOptions options) { super(parent, options); }
+        @Override public void render(DrawContext ctx,int mx,int my,float d){ super.render(ctx,mx,my,d); drawChrome(ctx); }
+        private void drawChrome(DrawContext ctx){ctx.fill(0,0,width,26,0xD9080A0F);ctx.fill(0,25,width,27,accent());ctx.drawText(textRenderer,Text.literal("TYSMVISUALS  •  НАСТРОЙКИ"),10,8,accent(),true);}
+        @Override public boolean keyPressed(int k,int s,int m){if(k==GLFW.GLFW_KEY_RIGHT_SHIFT){MinecraftClient.getInstance().setScreen(new TysmMenuScreen());return true;}return super.keyPressed(k,s,m);}
+    }
+
+    private static class HudEditorScreen extends Screen {
+        private HudEditorScreen() { super(Text.literal("TysmVisuals HUD Editor")); }
+
+        @Override
+        public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+            MinecraftClient client = MinecraftClient.getInstance();
+            // The world continues rendering behind this transparent editor screen.
+            renderBackground(ctx, mouseX, mouseY, delta);
+            int w = width, h = height, red = accent();
+            ctx.fill(0, 0, w, 28, 0xC9080A0F);
+            ctx.fill(0, 27, w, 29, red);
+            ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("TYSMVISUALS  •  HUD EDITOR"), w / 2, 9, WHITE);
+            ctx.drawCenteredTextWithShadow(textRenderer, Text.literal("ЛКМ + перетаскивание • ESC — выйти"), w / 2, h - 18, MUTED);
+
+            drawEditorBox(ctx, "Keystrokes", "Keystrokes", mouseX, mouseY, red);
+            drawEditorBox(ctx, "FPS / Ping", "FPS / Ping", mouseX, mouseY, red);
+            drawEditorBox(ctx, "Coordinates", "Coordinates", mouseX, mouseY, red);
+            drawEditorBox(ctx, "Movement HUD", "Movement HUD", mouseX, mouseY, red);
+            drawEditorBox(ctx, "Target HUD", "Target HUD", mouseX, mouseY, red);
+            drawEditorBox(ctx, "Armor HUD", "Armor HUD", mouseX, mouseY, red);
+            drawEditorBox(ctx, "Item HUD", "Item HUD", mouseX, mouseY, red);
+            if (mouseX >= 8 && mouseX <= 170 && mouseY >= 34 && mouseY <= 55) {
+                // no-op: keeps the top chrome easy to click without selecting a HUD item.
+            }
+        }
+
+        private void drawEditorBox(DrawContext ctx, String id, String label, int mouseX, int mouseY, int red) {
+            int[] p = hudPos(id, defaultX(id), defaultY(id));
+            int bw = id.equals("Armor HUD") ? 112 : (id.equals("Keystrokes") ? 112 : 150);
+            int bh = id.equals("Armor HUD") ? 82 : (id.equals("Item HUD") || id.equals("Target HUD") ? 48 : 38);
+            if (id.equals("Keystrokes")) bh = 48;
+            if (id.equals("Target HUD")) bw = 180;
+            boolean hover = mouseX >= p[0] && mouseX <= p[0] + bw && mouseY >= p[1] && mouseY <= p[1] + bh;
+            ctx.fill(p[0], p[1], p[0] + bw, p[1] + bh, hover ? 0xA830333D : 0x80202028);
+            ctx.fill(p[0], p[1], p[0] + 3, p[1] + bh, red);
+            ctx.drawText(textRenderer, Text.literal(label), p[0] + 8, p[1] + 7, hover ? WHITE : MUTED, true);
+            ctx.drawText(textRenderer, Text.literal("DRAG"), p[0] + 8, p[1] + bh - 13, red, false);
+        }
+
+        private int defaultX(String id) {
+            return switch (id) { case "Target HUD", "Armor HUD", "Item HUD" -> width - (id.equals("Target HUD") ? 188 : 120); default -> 8; };
+        }
+        private int defaultY(String id) {
+            return switch (id) { case "FPS / Ping" -> 102; case "Coordinates" -> 146; case "Movement HUD" -> 190; case "Item HUD" -> height - 92; default -> 48; };
+        }
+
+        @Override
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            if (button != 0) return true;
+            String[] ids = {"Keystrokes", "FPS / Ping", "Coordinates", "Movement HUD", "Target HUD", "Armor HUD", "Item HUD"};
+            for (String id : ids) {
+                int[] p = hudPos(id, defaultX(id), defaultY(id));
+                int bw = id.equals("Armor HUD") || id.equals("FPS / Ping") || id.equals("Keystrokes") || id.equals("Item HUD") ? 112 : (id.equals("Target HUD") ? 180 : 150);
+                int bh = id.equals("Armor HUD") ? 82 : (id.equals("Item HUD") || id.equals("Target HUD") ? 48 : (id.equals("Keystrokes") ? 48 : 38));
+                if (mouseX >= p[0] && mouseX <= p[0] + bw && mouseY >= p[1] && mouseY <= p[1] + bh) {
+                    draggedHud = id; dragOffsetX = (int)mouseX - p[0]; dragOffsetY = (int)mouseY - p[1]; return true;
+                }
+            }
+            return true;
+        }
+
+        @Override
+        public boolean mouseDragged(double mouseX, double mouseY, int button, double dx, double dy) {
+            if (draggedHud != null && button == 0) {
+                int[] p = hudPos(draggedHud, 8, 48);
+                p[0] = MathHelper.clamp((int)mouseX - dragOffsetX, 0, Math.max(0, width - 120));
+                p[1] = MathHelper.clamp((int)mouseY - dragOffsetY, 30, Math.max(30, height - 30));
+                return true;
+            }
+            return super.mouseDragged(mouseX, mouseY, button, dx, dy);
+        }
+
+        @Override
+        public boolean mouseReleased(double mouseX, double mouseY, int button) {
+            if (button == 0) draggedHud = null;
+            return true;
+        }
+
+        @Override
+        public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE || keyCode == GLFW.GLFW_KEY_RIGHT_SHIFT) { close(); return true; }
             return super.keyPressed(keyCode, scanCode, modifiers);
         }
     }
@@ -938,9 +1171,9 @@ public class TysmVisualsClient implements ClientModInitializer {
 
                 MinecraftClient client = MinecraftClient.getInstance();
                 switch (i) {
-                    case 0 -> client.setScreen(new net.minecraft.client.gui.screen.world.SelectWorldScreen(this));
-                    case 1 -> client.setScreen(new net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen(this));
-                    case 2 -> client.setScreen(new net.minecraft.client.gui.screen.option.OptionsScreen(this, client.options));
+                    case 0 -> client.setScreen(new TysmSelectWorldScreen(this));
+                    case 1 -> client.setScreen(new TysmMultiplayerScreen(this));
+                    case 2 -> client.setScreen(new TysmOptionsScreen(this, client.options));
                     case 3 -> client.scheduleStop();
                 }
                 return true;
