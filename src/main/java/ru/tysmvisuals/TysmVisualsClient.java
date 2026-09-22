@@ -411,7 +411,7 @@ public class TysmVisualsClient implements ClientModInitializer {
     private static class TysmMenuScreen extends Screen {
         private long openedAt;
         private int selectedTab = 0;
-        private int selectedVisual = -1;
+        private int selectedVisual = -1; private int visualScroll = 0;
 
         private static final String[] TABS = {
                 "Главное", "Визуалы", "Утилиты", "Косметика", "Настройки"
@@ -503,7 +503,7 @@ public class TysmVisualsClient implements ClientModInitializer {
             ctx.drawText(textRenderer, Text.literal("Визуалы"), x, y + 2, alpha(WHITE, a), true);
 
             if (selectedVisual < 0) {
-                ctx.drawText(textRenderer, Text.literal("ЛКМ — настройки визуала"),
+                ctx.drawText(textRenderer, Text.literal("ЛКМ — открыть • колесо — прокрутка"),
                         x, y + 18, alpha(MUTED, a), false);
 
                 int listY = y + 35;
@@ -661,6 +661,17 @@ public class TysmVisualsClient implements ClientModInitializer {
             }
 
             return super.mouseClicked(mouseX, mouseY, button);
+        }
+
+        @Override
+        public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
+            if (selectedTab == 1 && selectedVisual < 0) {
+                int maxScroll = Math.max(0, VISUALS.length - 10);
+                if (verticalAmount < 0) visualScroll = Math.min(maxScroll, visualScroll + 2);
+                if (verticalAmount > 0) visualScroll = Math.max(0, visualScroll - 2);
+                return true;
+            }
+            return super.mouseScrolled(mouseX, mouseY, horizontalAmount, verticalAmount);
         }
 
         @Override
