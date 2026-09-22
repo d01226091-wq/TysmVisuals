@@ -88,6 +88,12 @@ public class TysmVisualsClient implements ClientModInitializer {
             if (menuKey.wasPressed() && client.currentScreen == null) {
                 client.setScreen(new TysmMenuScreen());
             }
+
+            // Replace the vanilla title screen with the TysmVisuals main screen.
+            if (client.currentScreen instanceof net.minecraft.client.gui.screen.TitleScreen
+                    && !(client.currentScreen instanceof TysmMainMenuScreen)) {
+                client.setScreen(new TysmMainMenuScreen());
+            }
         });
 
         HudRenderCallback.EVENT.register((context, tickDelta) -> renderVisuals(context));
@@ -166,6 +172,21 @@ public class TysmVisualsClient implements ClientModInitializer {
         }
         if (extra("Dynamic Island")) {
             drawDynamicIsland(ctx, w, red);
+        }
+        if (extra("Sunset Glow") || extra("Moon Glow") || extra("Night Accent")) {
+            drawWorldAccent(ctx, w, h, red);
+        }
+        if (extra("Fog Tint") || extra("World Fade")) {
+            drawWorldFade(ctx, w, h, red);
+        }
+        if (extra("Water Tint")) {
+            drawWaterStyle(ctx, w, h, red);
+        }
+        if (extra("Status Cards")) {
+            drawStatusCards(ctx, client, w, h, red);
+        }
+        if (extra("Hotbar Accent")) {
+            drawHotbarAccent(ctx, w, h, red);
         }
     }
 
@@ -351,6 +372,39 @@ public class TysmVisualsClient implements ClientModInitializer {
         ctx.drawText(client.textRenderer, Text.literal(value), x + 7, y + 13, WHITE, true);
     }
 
+    private static void drawWorldAccent(DrawContext ctx, int w, int h, int red) {
+        float wave = (MathHelper.sin(pulse * 0.45f) + 1f) * 0.5f;
+        int alpha = 10 + (int)(wave * 12f);
+        if (extra("Sunset Glow")) {
+            ctx.fill(0, h / 2, w, h, (alpha << 24) | (red & 0xFFFFFF));
+        }
+        if (extra("Moon Glow")) {
+            int cx = w - 42;
+            int cy = 42;
+            ctx.fill(cx - 10, cy - 10, cx + 10, cy + 10, ((alpha + 8) << 24) | (red & 0xFFFFFF));
+            ctx.fill(cx - 6, cy - 10, cx + 10, cy + 6, 0xB0000000);
+        }
+        if (extra("Night Accent")) {
+            ctx.fill(0, 0, w, 2, ((alpha + 5) << 24) | (red & 0xFFFFFF));
+        }
+    }
+
+    private static void drawWorldFade(DrawContext ctx, int w, int h, int red) {
+        int alpha = extra("Fog Tint") ? 9 : 5;
+        ctx.fill(0, h / 3, w, h * 2 / 3, (alpha << 24) | (red & 0xFFFFFF));
+        if (extra("World Fade")) {
+            ctx.fill(0, 0, w, 1, ((alpha + 8) << 24) | (red & 0xFFFFFF));
+            ctx.fill(0, h - 2, w, h, ((alpha + 8) << 24) | (red & 0xFFFFFF));
+        }
+    }
+
+    private static void drawWaterStyle(DrawContext ctx, int w, int h, int red) {
+        int y = h / 2;
+        int alpha = 7 + (int)((MathHelper.sin(pulse * 1.2f) + 1f) * 3f);
+        ctx.fill(0, y, w, y + 1, (alpha << 24) | (red & 0xFFFFFF));
+        ctx.fill(0, y + 2, w, y + 3, ((alpha / 2) << 24) | (red & 0xFFFFFF));
+    }
+
     private static void drawDynamicIsland(DrawContext ctx, int w, int red) {
         int width = 150;
         int x = w / 2 - width / 2;
@@ -420,7 +474,12 @@ public class TysmVisualsClient implements ClientModInitializer {
         private static final String[] VISUALS = {
                 "Keystrokes", "FPS / Ping", "Coordinates", "Movement HUD",
                 "Target HUD", "Armor HUD", "Item HUD", "Crosshair",
-                "Particles", "Vignette", "Hotbar Glow", "HUD Branding"
+                "Particles", "Vignette", "Hotbar Glow", "HUD Branding",
+                "Ambient Dots", "Sparkles", "Soft Rings", "Orbit Particles",
+                "Glow Motes", "Screen Sparks", "FPS Badge", "Ping Badge",
+                "Clock Badge", "Dynamic Island", "Sky Tint", "Fog Tint",
+                "Water Tint", "Night Accent", "Sunset Glow", "Moon Glow",
+                "World Fade", "Status Cards", "Hotbar Accent", "Clean UI"
         };
 
         private TysmMenuScreen() {
@@ -506,21 +565,41 @@ public class TysmVisualsClient implements ClientModInitializer {
                 ctx.drawText(textRenderer, Text.literal("ЛКМ — открыть • колесо — прокрутка"),
                         x, y + 18, alpha(MUTED, a), false);
 
+                int rowH = 25;
+                int visibleRows = 6;
                 int listY = y + 35;
+                int colW = (w - 5) / 2;
+
                 for (int i = 0; i < VISUALS.length; i++) {
-                    int rowY = listY + (i % 6) * 26;
-                    int colX = x + (i / 6) * ((w + 5) / 2);
-                    int colW = (w - 5) / 2;
+                    int row = i / 2;
+                    int col = i % 2;
+                    int visibleRow = row - visualScroll;
+                    if (visibleRow < 0 || visibleRow >= visibleRows) continue;
+
+                    int rowY = listY + visibleRow * rowH;
+                    int colX = x + col * (colW + 5);
                     boolean on = visualEnabled(i);
 
-                    ctx.fill(colX, rowY, colX + colW, rowY + 22,
+                    ctx.fill(colX, rowY, colX + colW, rowY + 21,
                             alpha(on ? 0x302A2D38 : 0x181A1F26, a));
-                    if (on) ctx.fill(colX, rowY, colX + 2, rowY + 22, alpha(red, a));
+                    if (on) ctx.fill(colX, rowY, colX + 2, rowY + 21, alpha(red, a));
 
-                    ctx.drawText(textRenderer, Text.literal(VISUALS[i]),
-                            colX + 7, rowY + 6, alpha(on ? WHITE : MUTED, a), on);
+                    String label = VISUALS[i];
+                    ctx.drawText(textRenderer, Text.literal(label),
+                            colX + 7, rowY + 5, alpha(on ? WHITE : MUTED, a), on);
                     ctx.drawText(textRenderer, Text.literal(on ? "ON" : "OFF"),
-                            colX + colW - 22, rowY + 6, alpha(on ? red : MUTED, a), false);
+                            colX + colW - 23, rowY + 5, alpha(on ? red : MUTED, a), false);
+                }
+
+                int maxScroll = Math.max(0, ((VISUALS.length + 1) / 2) - visibleRows);
+                if (maxScroll > 0) {
+                    int trackX = x + w - 2;
+                    int trackY = listY;
+                    int trackH = visibleRows * rowH - 4;
+                    int thumbH = Math.max(12, trackH * visibleRows / (visibleRows + maxScroll));
+                    int thumbY = trackY + (trackH - thumbH) * visualScroll / maxScroll;
+                    ctx.fill(trackX, trackY, trackX + 2, trackY + trackH, alpha(0x30343A45, a));
+                    ctx.fill(trackX, thumbY, trackX + 2, thumbY + thumbH, alpha(red, a));
                 }
             } else {
                 String name = VISUALS[selectedVisual];
@@ -592,7 +671,7 @@ public class TysmVisualsClient implements ClientModInitializer {
                 case 9 -> vignetteEnabled;
                 case 10 -> hotbarGlow;
                 case 11 -> hudEnabled;
-                default -> false;
+                default -> extra(VISUALS[i]);
             };
         }
 
@@ -610,6 +689,7 @@ public class TysmVisualsClient implements ClientModInitializer {
                 case 9 -> vignetteEnabled = !vignetteEnabled;
                 case 10 -> hotbarGlow = !hotbarGlow;
                 case 11 -> hudEnabled = !hudEnabled;
+                default -> setExtra(VISUALS[i], !extra(VISUALS[i]));
             }
         }
 
@@ -642,12 +722,18 @@ public class TysmVisualsClient implements ClientModInitializer {
                         return true;
                     }
 
+                    int rowH = 25;
+                    int visibleRows = 6;
+                    int colW = (contentW - 5) / 2;
                     for (int i = 0; i < VISUALS.length; i++) {
-                        int rowY = listY + (i % 6) * 26;
-                        int colX = contentX + (i / 6) * ((contentW + 5) / 2);
-                        int colW = (contentW - 5) / 2;
+                        int row = i / 2;
+                        int col = i % 2;
+                        int visibleRow = row - visualScroll;
+                        if (visibleRow < 0 || visibleRow >= visibleRows) continue;
+                        int rowY = listY + visibleRow * rowH;
+                        int colX = contentX + col * (colW + 5);
                         if (mouseX >= colX && mouseX <= colX + colW &&
-                                mouseY >= rowY && mouseY <= rowY + 22) {
+                                mouseY >= rowY && mouseY <= rowY + 21) {
                             selectedVisual = i;
                             return true;
                         }
@@ -666,7 +752,7 @@ public class TysmVisualsClient implements ClientModInitializer {
         @Override
         public boolean mouseScrolled(double mouseX, double mouseY, double horizontalAmount, double verticalAmount) {
             if (selectedTab == 1 && selectedVisual < 0) {
-                int maxScroll = Math.max(0, VISUALS.length - 10);
+                int maxScroll = Math.max(0, ((VISUALS.length + 1) / 2) - 6);
                 if (verticalAmount < 0) visualScroll = Math.min(maxScroll, visualScroll + 2);
                 if (verticalAmount > 0) visualScroll = Math.max(0, visualScroll - 2);
                 return true;
@@ -687,4 +773,110 @@ public class TysmVisualsClient implements ClientModInitializer {
             return super.keyPressed(keyCode, scanCode, modifiers);
         }
     }
+
+    private static class TysmMainMenuScreen extends Screen {
+        private float fade = 0f;
+        private long openedAt;
+
+        private TysmMainMenuScreen() {
+            super(Text.literal("TysmVisuals Main Menu"));
+        }
+
+        @Override
+        protected void init() {
+            openedAt = System.currentTimeMillis();
+        }
+
+        @Override
+        public void render(DrawContext ctx, int mouseX, int mouseY, float delta) {
+            MinecraftClient client = MinecraftClient.getInstance();
+            int w = width;
+            int h = height;
+            int red = accent();
+
+            float t = MathHelper.clamp((System.currentTimeMillis() - openedAt) / 500f, 0f, 1f);
+            fade = 1f - (float)Math.pow(1f - t, 3);
+
+            ctx.fill(0, 0, w, h, 0xFF08090E);
+            for (int i = 0; i < 8; i++) {
+                int yy = i * h / 8;
+                int alpha = 18 + i * 3;
+                ctx.fill(0, yy, w, yy + h / 8 + 1, (alpha << 24) | (red & 0xFFFFFF));
+            }
+
+            // Animated central visual panel.
+            int panelW = Math.min(520, w - 40);
+            int panelH = Math.min(270, h - 70);
+            int px = (w - panelW) / 2;
+            int py = Math.max(20, (h - panelH) / 2 - 8);
+
+            ctx.fill(px + 6, py + 8, px + panelW + 6, py + panelH + 8, 0x55000000);
+            ctx.fill(px, py, px + panelW, py + panelH, 0xD90A0B12);
+            ctx.fill(px, py, px + panelW, py + 3, red);
+
+            ctx.drawCenteredTextWithShadow(client.textRenderer, Text.literal("TYSM"),
+                    w / 2, py + 27, red);
+            ctx.drawCenteredTextWithShadow(client.textRenderer, Text.literal("VISUALS"),
+                    w / 2, py + 42, WHITE);
+            ctx.drawCenteredTextWithShadow(client.textRenderer, Text.literal("1.21.4  •  FABRIC  •  RED EDITION"),
+                    w / 2, py + 61, MUTED);
+
+            int bw = Math.min(250, panelW - 70);
+            int bx = (w - bw) / 2;
+            String[] labels = {"Одиночная игра", "Сетевая игра", "Настройки", "Выйти"};
+            for (int i = 0; i < labels.length; i++) {
+                int by = py + 83 + i * 34;
+                boolean hover = mouseX >= bx && mouseX <= bx + bw && mouseY >= by && mouseY <= by + 27;
+                int bg = hover ? 0x4830333D : 0x28181A21;
+                ctx.fill(bx, by, bx + bw, by + 27, bg);
+                if (hover) ctx.fill(bx, by, bx + 3, by + 27, red);
+                ctx.drawCenteredTextWithShadow(client.textRenderer, Text.literal(labels[i]),
+                        bx + bw / 2, by + 9, hover ? WHITE : MUTED);
+            }
+
+            ctx.drawCenteredTextWithShadow(client.textRenderer,
+                    Text.literal("RSHIFT — VISUAL MENU   •   TYSMVISUALS"),
+                    w / 2, py + panelH - 19, MUTED);
+        }
+
+        @Override
+        public boolean mouseClicked(double mouseX, double mouseY, int button) {
+            if (button != 0) return true;
+            int w = width;
+            int h = height;
+            int panelW = Math.min(520, w - 40);
+            int panelH = Math.min(270, h - 70);
+            int py = Math.max(20, (h - panelH) / 2 - 8);
+            int bw = Math.min(250, panelW - 70);
+            int bx = (w - bw) / 2;
+
+            for (int i = 0; i < 4; i++) {
+                int by = py + 83 + i * 34;
+                if (mouseX < bx || mouseX > bx + bw || mouseY < by || mouseY > by + 27) continue;
+
+                MinecraftClient client = MinecraftClient.getInstance();
+                switch (i) {
+                    case 0 -> client.setScreen(new net.minecraft.client.gui.screen.world.SelectWorldScreen(this));
+                    case 1 -> client.setScreen(new net.minecraft.client.gui.screen.multiplayer.MultiplayerScreen(this));
+                    case 2 -> client.setScreen(new net.minecraft.client.gui.screen.option.OptionsScreen(this, client.options));
+                    case 3 -> client.scheduleStop();
+                }
+                return true;
+            }
+            return true;
+        }
+
+        @Override
+        public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+            if (keyCode == GLFW.GLFW_KEY_RIGHT_SHIFT) {
+                MinecraftClient.getInstance().setScreen(new TysmMenuScreen());
+                return true;
+            }
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+                return true;
+            }
+            return super.keyPressed(keyCode, scanCode, modifiers);
+        }
+    }
+
 }
