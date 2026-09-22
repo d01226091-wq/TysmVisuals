@@ -335,99 +335,15 @@ public class TysmVisualsClient implements ClientModInitializer {
     }
 
     private static ItemStack targetIcon(LivingEntity target) {
-        // Use the matching vanilla mob head/item whenever Minecraft provides one.
         if (target instanceof PlayerEntity) return new ItemStack(Items.PLAYER_HEAD);
         if (target instanceof WitherSkeletonEntity) return new ItemStack(Items.WITHER_SKELETON_SKULL);
         if (target instanceof SkeletonEntity) return new ItemStack(Items.SKELETON_SKULL);
         if (target instanceof ZombieEntity) return new ItemStack(Items.ZOMBIE_HEAD);
         if (target instanceof CreeperEntity) return new ItemStack(Items.CREEPER_HEAD);
 
-        // Generic fallback: render the entity's own spawn egg as its Target HUD icon.
-        // This covers the rest of the vanilla mobs without changing gameplay.
-        net.minecraft.entity.EntityType<?> type = target.getType();
-        ItemStack egg = spawnEggFor(type);
-        return egg.isEmpty() ? ItemStack.EMPTY : egg;
-    }
-
-    private static ItemStack spawnEggFor(net.minecraft.entity.EntityType<?> type) {
-        if (type == net.minecraft.entity.EntityType.ALLAY) return new ItemStack(Items.ALLAY_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.ARMOR_STAND) return ItemStack.EMPTY;
-        if (type == net.minecraft.entity.EntityType.AXOLOTL) return new ItemStack(Items.AXOLOTL_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.BAT) return new ItemStack(Items.BAT_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.BEE) return new ItemStack(Items.BEE_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.BLAZE) return new ItemStack(Items.BLAZE_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.BOGGED) return new ItemStack(Items.BOGGED_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.BREEZE) return new ItemStack(Items.BREEZE_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.CAMEL) return new ItemStack(Items.CAMEL_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.CAT) return new ItemStack(Items.CAT_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.CAVE_SPIDER) return new ItemStack(Items.CAVE_SPIDER_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.CHICKEN) return new ItemStack(Items.CHICKEN_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.COD) return new ItemStack(Items.COD_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.COW) return new ItemStack(Items.COW_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.CREAKING) return new ItemStack(Items.CREAKING_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.CREEPER) return new ItemStack(Items.CREEPER_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.DOLPHIN) return new ItemStack(Items.DOLPHIN_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.DONKEY) return new ItemStack(Items.DONKEY_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.DROWNED) return new ItemStack(Items.DROWNED_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.ELDER_GUARDIAN) return new ItemStack(Items.ELDER_GUARDIAN_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.ENDERMAN) return new ItemStack(Items.ENDERMAN_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.ENDERMITE) return new ItemStack(Items.ENDERMITE_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.EVOKER) return new ItemStack(Items.EVOKER_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.FOX) return new ItemStack(Items.FOX_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.FROG) return new ItemStack(Items.FROG_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.GHAST) return new ItemStack(Items.GHAST_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.GLOW_SQUID) return new ItemStack(Items.GLOW_SQUID_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.GOAT) return new ItemStack(Items.GOAT_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.GUARDIAN) return new ItemStack(Items.GUARDIAN_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.HOGLIN) return new ItemStack(Items.HOGLIN_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.HORSE) return new ItemStack(Items.HORSE_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.HUSK) return new ItemStack(Items.HUSK_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.IRON_GOLEM) return ItemStack.EMPTY;
-        if (type == net.minecraft.entity.EntityType.LLAMA) return new ItemStack(Items.LLAMA_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.MAGMA_CUBE) return new ItemStack(Items.MAGMA_CUBE_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.MOOSHROOM) return new ItemStack(Items.MOOSHROOM_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.MULE) return new ItemStack(Items.MULE_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.OCELOT) return new ItemStack(Items.OCELOT_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.PANDA) return new ItemStack(Items.PANDA_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.PARROT) return new ItemStack(Items.PARROT_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.PHANTOM) return new ItemStack(Items.PHANTOM_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.PIG) return new ItemStack(Items.PIG_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.PIGLIN) return new ItemStack(Items.PIGLIN_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.PIGLIN_BRUTE) return new ItemStack(Items.PIGLIN_BRUTE_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.PILLAGER) return new ItemStack(Items.PILLAGER_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.POLAR_BEAR) return new ItemStack(Items.POLAR_BEAR_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.PUFFERFISH) return new ItemStack(Items.PUFFERFISH_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.RABBIT) return new ItemStack(Items.RABBIT_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.RAVAGER) return new ItemStack(Items.RAVAGER_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.SALMON) return new ItemStack(Items.SALMON_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.SHEEP) return new ItemStack(Items.SHEEP_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.SHULKER) return new ItemStack(Items.SHULKER_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.SILVERFISH) return new ItemStack(Items.SILVERFISH_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.SKELETON) return new ItemStack(Items.SKELETON_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.SLIME) return new ItemStack(Items.SLIME_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.SNIFFER) return new ItemStack(Items.SNIFFER_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.SNOW_GOLEM) return ItemStack.EMPTY;
-        if (type == net.minecraft.entity.EntityType.SPIDER) return new ItemStack(Items.SPIDER_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.SQUID) return new ItemStack(Items.SQUID_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.STRAY) return new ItemStack(Items.STRAY_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.STRIDER) return new ItemStack(Items.STRIDER_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.TADPOLE) return new ItemStack(Items.TADPOLE_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.TRADER_LLAMA) return new ItemStack(Items.TRADER_LLAMA_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.TROPICAL_FISH) return new ItemStack(Items.TROPICAL_FISH_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.TURTLE) return new ItemStack(Items.TURTLE_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.VEX) return new ItemStack(Items.VEX_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.VILLAGER) return new ItemStack(Items.VILLAGER_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.VINDICATOR) return new ItemStack(Items.VINDICATOR_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.WANDERING_TRADER) return new ItemStack(Items.WANDERING_TRADER_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.WARDEN) return new ItemStack(Items.WARDEN_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.WITCH) return new ItemStack(Items.WITCH_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.WITHER) return new ItemStack(Items.WITHER_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.WOLF) return new ItemStack(Items.WOLF_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.ZOGLIN) return new ItemStack(Items.ZOGLIN_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.ZOMBIE) return new ItemStack(Items.ZOMBIE_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.ZOMBIE_VILLAGER) return new ItemStack(Items.ZOMBIE_VILLAGER_SPAWN_EGG);
-        if (type == net.minecraft.entity.EntityType.ZOMBIFIED_PIGLIN) return new ItemStack(Items.ZOMBIFIED_PIGLIN_SPAWN_EGG);
-        return ItemStack.EMPTY;
+        net.minecraft.item.SpawnEggItem egg =
+                net.minecraft.item.SpawnEggItem.forEntity(target.getType());
+        return egg == null ? ItemStack.EMPTY : new ItemStack(egg);
     }
 
 
