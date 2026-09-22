@@ -3,7 +3,9 @@
   "package": "ru.tysmvisuals.mixin",
   "compatibilityLevel": "JAVA_21",
   "client": [
-    "ClientWorldSkyColorMixin"
+    "ClientWorldSkyColorMixin",
+    "CameraFreeLookMixin",
+    "GameRendererZoomMixin"
   ],
   "injectors": {
     "defaultRequire": 1
